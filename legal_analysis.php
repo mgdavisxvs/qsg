@@ -5,14 +5,18 @@
  * A mathematically rigorous system for analyzing legal documents and contracts.
  * Following Donald Knuth's principles: correctness, clarity, and mathematical precision.
  *
- * METRICS:
+ * METRICS (all bounded [0, 1]):
  * 1. CLARITY: Readability, precision, unambiguous language (0.0-1.0)
  * 2. ENFORCEABILITY: Legal validity, proper structure, binding elements (0.0-1.0)
+ *    - KNUTH v4.1: Base score changed from 0.5 to 0.0 for mathematical correctness
  * 3. RISK: Problematic language, vague terms, one-sided clauses (0.0-1.0, lower=better)
  * 4. COMPLETENESS: Essential contract elements present (0.0-1.0)
  *
+ * OVERALL QUALITY: Q(d) = (C + E + (1-R) + P) / 4 ∈ [0, 1]
+ *   - Now correctly bounded [0, 1] (was [0.125, 1] before Knuth fix)
+ *
  * @author  Legal Analysis Team (Knuth-style literate programming)
- * @version 1.0
+ * @version 1.1 (Knuth Correctness Fixes)
  */
 
 declare(strict_types=1);
@@ -141,7 +145,8 @@ function compute_legal_enforceability(array $tokens): array {
         ];
     }
 
-    $score = 0.5; // Base score (neutral)
+    $score = 0.0; // KNUTH FIX: Start from zero (not 0.5)
+                  // Contracts with no enforceable elements should score near 0, not 50%
     $elements = [];
 
     // (1) Binding language: "shall", "must", "will", "agrees to"
@@ -156,7 +161,8 @@ function compute_legal_enforceability(array $tokens): array {
     }
 
     if ($binding_count > 0) {
-        $score += 0.2;
+        // KNUTH FIX: First binding verb gets 0.2 (essential), additional ones add 0.05 each
+        $score += min(0.3, 0.2 + ($binding_count - 1) * 0.05);
         $elements[] = 'binding language';
     }
 
@@ -173,7 +179,7 @@ function compute_legal_enforceability(array $tokens): array {
     }
 
     if ($has_consideration) {
-        $score += 0.15;
+        $score += 0.25; // KNUTH FIX: Increased from 0.15 (essential contract element)
         $elements[] = 'consideration';
     }
 
@@ -190,7 +196,7 @@ function compute_legal_enforceability(array $tokens): array {
     }
 
     if ($has_parties) {
-        $score += 0.1;
+        $score += 0.25; // KNUTH FIX: Increased from 0.1 (essential contract element)
         $elements[] = 'identified parties';
     }
 
@@ -206,14 +212,18 @@ function compute_legal_enforceability(array $tokens): array {
     }
 
     if ($formality_count > 0) {
-        $score += min(0.05, $formality_count * 0.02);
+        $score += min(0.2, $formality_count * 0.05); // KNUTH FIX: Increased from 0.05 max to 0.2 max
         $elements[] = 'formal language';
     }
+
+    // KNUTH FIX: New allocation totals 1.0 max:
+    //   Binding: 0.3, Consideration: 0.25, Parties: 0.25, Formality: 0.2 = 1.0
 
     // Cap at 1.0
     $score = min(1.0, $score);
 
-    $label = $score >= 0.7 ? 'Enforceable' : ($score >= 0.4 ? 'Questionable' : 'Weak');
+    // KNUTH FIX: Adjusted thresholds for new 0-1 scale (was 0.5-1)
+    $label = $score >= 0.7 ? 'Enforceable' : ($score >= 0.5 ? 'Questionable' : 'Weak');
 
     $notes = sprintf(
         'Elements detected: %s. Binding verbs: %d. Formality: %d formal terms. %s',
