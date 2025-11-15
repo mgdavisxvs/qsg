@@ -626,3 +626,391 @@ function format_score(?float $score): string {
     }
     return 'score: ' . (string)round($score * 100) . '/100';
 }
+
+// ============================================================================
+// FIRST-ORDER LOGIC (FOL) BUILDER
+// ============================================================================
+
+/**
+ * Build First-Order Logic skeleton from tokens.
+ *
+ * COMPLEXITY: O(n) where n = token count
+ *
+ * Constructs a rough FOL-like formula by:
+ * 1. Splitting clause at prepositions
+ * 2. Converting phrases to entity variables
+ * 3. Creating relations from prepositions
+ *
+ * KNUTH: Uses centralized PREPOSITIONS constant to avoid duplication.
+ *
+ * @param array $tokens Classified tokens
+ * @return array ['formula' => string, 'notes' => string]
+ */
+function build_fol(array $tokens): array {
+    if (count($tokens) === 0) {
+        return [
+            'formula' => '—',
+            'notes'   => 'No tokens to analyse.',
+        ];
+    }
+
+    static $preps = null;
+    if ($preps === null) {
+        $preps = array_fill_keys(PREPOSITIONS, true);
+    }
+
+    // Collect raw text and negations
+    $raw_text_parts = [];
+    $negations = [];
+    foreach ($tokens as $t) {
+        if ($t['tag'] === 'NEG') {
+            $negations[] = $t['lower'];
+        }
+        $raw_text_parts[] = $t['clean'] !== '' ? $t['clean'] : $t['lower'];
+    }
+    $raw_text = implode(' ', $raw_text_parts);
+
+    // Check if clause has prepositions
+    $has_prep = false;
+    foreach ($tokens as $t) {
+        if (isset($preps[$t['lower']])) {
+            $has_prep = true;
+            break;
+        }
+    }
+
+    // No prepositions → treat entire clause as single predicate
+    if (!$has_prep) {
+        $note_neg = $negations ? ' Negations detected: ' . implode(', ', $negations) . '.' : '';
+        return [
+            'formula' => 'ClauseAsPredicate(c): "' . $raw_text . '"',
+            'notes'   => 'No explicit prepositions detected – treating the entire clause as a single predicate.' . $note_neg,
+        ];
+    }
+
+    // Split into segments: phrase / prep / phrase ...
+    $segments = [];
+    $current  = [];
+
+    foreach ($tokens as $t) {
+        if (isset($preps[$t['lower']])) {
+            if (!empty($current)) {
+                $segments[] = ['type' => 'phrase', 'tokens' => $current];
+                $current    = [];
+            }
+            $segments[] = ['type' => 'prep', 'tokens' => [$t]];
+        } else {
+            $current[] = $t;
+        }
+    }
+    if (!empty($current)) {
+        $segments[] = ['type' => 'phrase', 'tokens' => $current];
+    }
+
+    $entities  = [];
+    $relations = [];
+
+    $entity_idx = 0;
+    $last_ent   = null;
+
+    $phrase_to_entity = function (array $phrase_tokens, int $index): string {
+        $core = [];
+        foreach ($phrase_tokens as $t) {
+            // Skip determiners and conjunctions
+            if (preg_match('/^(the|a|an|and|or|but)$/u', $t['lower'])) {
+                continue;
+            }
+            $core[] = mb_strtolower($t['clean'], 'UTF-8');
+        }
+        if (empty($core)) {
+            return 'x' . $index;
+        }
+        $head = end($core);
+        $name = preg_replace('/[^a-z0-9]/u', '', $head);
+        return $name !== '' ? $name : ('x' . $index);
+    };
+
+    $count_segments = count($segments);
+    for ($i = 0; $i < $count_segments; $i++) {
+        $seg = $segments[$i];
+
+        if ($seg['type'] === 'phrase') {
+            $ent = $phrase_to_entity($seg['tokens'], $entity_idx++);
+            $entities[] = $ent;
+            if ($last_ent === null) {
+                $last_ent = $ent;
+            }
+        } elseif ($seg['type'] === 'prep') {
+            $prep_word = $seg['tokens'][0]['lower'];
+            $next     = $segments[$i + 1] ?? null;
+            if ($next && $next['type'] === 'phrase') {
+                $ent = $phrase_to_entity($next['tokens'], $entity_idx++);
+                $entities[] = $ent;
+                $relation_name = ucfirst($prep_word);
+                $relations[]  = $relation_name . '(' . $last_ent . ', ' . $ent . ')';
+                $last_ent      = $ent;
+                $i++; // Skip phrase we just used
+            }
+        }
+    }
+
+    $unique_entities = array_values(array_unique($entities));
+    $var_list        = implode(', ', $unique_entities);
+    $entity_preds    = [];
+    foreach ($unique_entities as $e) {
+        $entity_preds[] = 'E(' . $e . ')';
+    }
+
+    $all_preds = array_merge($entity_preds, $relations);
+    $formula  = '∃ ' . $var_list . ' · ' . implode(' ∧ ', $all_preds);
+
+    $notes = sprintf(
+        "Derived %d entity symbol(s): %s · Relations (%d): %s",
+        count($unique_entities),
+        $var_list ?: 'none',
+        count($relations),
+        $relations ? implode(', ', $relations) : 'none'
+    );
+    if ($negations) {
+        $notes .= ' · Negations detected: ' . implode(', ', $negations) . '.';
+    }
+
+    return [
+        'formula' => $formula,
+        'notes'   => $notes,
+    ];
+}
+
+// ============================================================================
+// TONE SUMMARY (Preposition Frequency)
+// ============================================================================
+
+/**
+ * Build tone summary from preposition frequencies.
+ *
+ * WOLFRAM: This reveals the "wiring" pattern of the clause.
+ * Different prepositions create different computational structures.
+ *
+ * @param array $tokens Classified tokens
+ * @return string Summary string
+ */
+function build_tone_summary(array $tokens): string {
+    $freq = [];
+    foreach ($tokens as $t) {
+        if ($t['tag'] === 'PREP') {
+            $p = $t['lower'];
+            $freq[$p] = ($freq[$p] ?? 0) + 1;
+        }
+    }
+
+    if (!$freq) {
+        return "No preposition wiring detected.";
+    }
+
+    arsort($freq);
+    $parts = [];
+    foreach ($freq as $p => $c) {
+        $parts[] = $p . '×' . $c;
+    }
+    return 'Preposition wiring: ' . implode(', ', $parts);
+}
+
+// ============================================================================
+// CLAUSE REWRITING
+// ============================================================================
+
+/**
+ * Rewrite clause to improve clarity.
+ *
+ * KNUTH: "Literate programming: say what you mean clearly."
+ *
+ * Currently implements one example rewrite for QSG-style legal clause.
+ * Can be extended with more transformation rules.
+ *
+ * @param string $text Raw clause
+ * @return string Rewritten clause
+ */
+function rewrite_clause(string $text): string {
+    $norm = normalize_clause($text);
+    if ($norm === '') {
+        return '—';
+    }
+
+    $rewritten = $norm;
+
+    // Example transformation: simplify QSG-style clause
+    $pattern = '/for the claim of the treaty is with the protection of the lands by the council within this venue under the natural law/i';
+    $replacement = 'the treaty claim provides for the protection of the lands by the council at this venue under natural law';
+    $rewritten = preg_replace($pattern, $replacement, $rewritten);
+
+    if ($rewritten === null) {
+        throw new RuntimeException('Regex execution failed in rewrite_clause');
+    }
+
+    // Capitalize first letter
+    $first = mb_substr($rewritten, 0, 1, 'UTF-8');
+    $rest  = mb_substr($rewritten, 1, null, 'UTF-8');
+    $rewritten = mb_strtoupper($first, 'UTF-8') . $rest;
+
+    // Ensure ends with punctuation
+    if (!preg_match('/[.!?]$/u', $rewritten)) {
+        $rewritten .= '.';
+    }
+
+    return $rewritten;
+}
+
+// ============================================================================
+// DIFF (LCS-based word diff)
+// ============================================================================
+
+/**
+ * Tokenize clause for diff operation.
+ *
+ * @param string $text Clause text
+ * @return array Array of word tokens
+ */
+function tokenize_for_diff(string $text): array {
+    $norm = normalize_clause($text);
+    if ($norm === '') {
+        return [];
+    }
+    return explode(' ', $norm);
+}
+
+/**
+ * Compute word-level diff using LCS (Longest Common Subsequence).
+ *
+ * KNUTH: Classic DP algorithm from TAOCP Vol 3.
+ * COMPLEXITY: O(m×n) time, O(m×n) space
+ * NOTE: Could be optimized to O(min(m,n)) space with Hirschberg's algorithm.
+ *
+ * Returns HTML with <del> for deletions and <ins> for insertions.
+ *
+ * @param string $original Original clause
+ * @param string $rewritten Rewritten clause
+ * @return string HTML diff
+ */
+function diff_clauses(string $original, string $rewritten): string {
+    $orig_tokens = tokenize_for_diff($original);
+    $new_tokens  = tokenize_for_diff($rewritten);
+
+    $m = count($orig_tokens);
+    $n = count($new_tokens);
+
+    // DP table for LCS length
+    $dp = array_fill(0, $m + 1, array_fill(0, $n + 1, 0));
+
+    for ($i = 1; $i <= $m; $i++) {
+        for ($j = 1; $j <= $n; $j++) {
+            if ($orig_tokens[$i - 1] === $new_tokens[$j - 1]) {
+                $dp[$i][$j] = $dp[$i - 1][$j - 1] + 1;
+            } else {
+                $dp[$i][$j] = max($dp[$i - 1][$j], $dp[$i][$j - 1]);
+            }
+        }
+    }
+
+    // Backtrack to construct diff
+    $result = [];
+    $i = $m;
+    $j = $n;
+
+    while ($i > 0 && $j > 0) {
+        if ($orig_tokens[$i - 1] === $new_tokens[$j - 1]) {
+            // Match: include unchanged
+            array_unshift($result, htmlspecialchars($orig_tokens[$i - 1], ENT_QUOTES, 'UTF-8'));
+            $i--;
+            $j--;
+        } elseif ($dp[$i - 1][$j] >= $dp[$i][$j - 1]) {
+            // Deletion from original
+            array_unshift(
+                $result,
+                '<del>' . htmlspecialchars($orig_tokens[$i - 1], ENT_QUOTES, 'UTF-8') . '</del>'
+            );
+            $i--;
+        } else {
+            // Insertion in rewritten
+            array_unshift(
+                $result,
+                '<ins>' . htmlspecialchars($new_tokens[$j - 1], ENT_QUOTES, 'UTF-8') . '</ins>'
+            );
+            $j--;
+        }
+    }
+
+    // Remaining deletions
+    while ($i > 0) {
+        array_unshift(
+            $result,
+            '<del>' . htmlspecialchars($orig_tokens[$i - 1], ENT_QUOTES, 'UTF-8') . '</del>'
+        );
+        $i--;
+    }
+
+    // Remaining insertions
+    while ($j > 0) {
+        array_unshift(
+            $result,
+            '<ins>' . htmlspecialchars($new_tokens[$j - 1], ENT_QUOTES, 'UTF-8') . '</ins>'
+        );
+        $j--;
+    }
+
+    return implode(' ', $result);
+}
+
+// ============================================================================
+// RULIAD STATE EXPLANATION
+// ============================================================================
+
+/**
+ * Explain ruliad bits with natural language.
+ *
+ * WOLFRAM: Each of the 2³ = 8 states represents a distinct computational
+ * configuration in the QSG × Logic × Kant ruliad.
+ *
+ * @param array $bits ['q' => int, 'l' => int, 'k' => int]
+ * @param array|null $labels Optional human-readable labels
+ * @return string Natural language explanation
+ */
+function explain_bits(array $bits, ?array $labels = null): string {
+    $q = $bits['q'];
+    $l = $bits['l'];
+    $k = $bits['k'];
+
+    $active = [];
+    if ($q) $active[] = "syntax/structure (QSG)";
+    if ($l) $active[] = "logical coherence (FOL-ish)";
+    if ($k) $active[] = "Kantian alignment (CI heuristic)";
+
+    if (!$active) {
+        return "The clause does not register as syntactically clear, logically structured, or morally oriented under the current heuristics.";
+    }
+
+    $base  = "The clause is positively classified on " . implode(", ", $active) . ".";
+    $extra = [];
+
+    // Specific state interpretations
+    if ($q && $l && $k) {
+        $extra[] = "It occupies the highest triad state: well-formed, inferentially meaningful, and ethically protective.";
+    } elseif ($q && $l && !$k) {
+        $extra[] = "Form and inference are strong, but the wording does not clearly express an ethical commitment respecting persons as ends.";
+    } elseif ($q && !$l && $k) {
+        $extra[] = "The sentence reads clearly and is morally oriented, but the logical structure (quantifiers, conditionals) is weak or implicit.";
+    } elseif (!$q && $l && $k) {
+        $extra[] = "The moral and logical signals are present, but the surface sentence is noisy or structurally fragile.";
+    }
+
+    // Append detailed labels if provided
+    if ($labels !== null) {
+        $extra[] = sprintf(
+            "QSG: %s. Logic: %s. Kant CI: %s.",
+            $labels['qsgLabel'] ?? 'unknown',
+            $labels['logicLabel'] ?? 'unknown',
+            $labels['kantLabel'] ?? 'unknown'
+        );
+    }
+
+    return $base . ' ' . implode(' ', $extra);
+}
