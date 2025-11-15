@@ -1,0 +1,1587 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>QSG Logic & Kant Lab – Ruliad Console v3</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .diff del {
+      background: #fee2e2;
+      color: #991b1b;
+      text-decoration: line-through;
+      padding: 1px 2px;
+      border-radius: 4px;
+    }
+    .diff ins {
+      background: #dcfce7;
+      color: #166534;
+      text-decoration: none;
+      padding: 1px 2px;
+      border-radius: 4px;
+    }
+    .state-node {
+      transition: all 0.2s ease;
+    }
+    .state-node:hover {
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
+  <div class="max-w-6xl mx-auto px-4 py-6 space-y-4">
+    <!-- Header -->
+    <header class="space-y-1">
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
+        Quantum Syntax Grammar · Logic · Kant · Ruliad Console v3
+      </h1>
+      <p class="text-sm text-slate-600">
+        Wolfram-inspired rule evolution; Knuth/Torvalds-grade engineering.
+        <span class="font-mono text-xs text-slate-500">
+          QSG (grammar) · FOL (logic) · CI (Kant) · 2³-state ruliad.
+        </span>
+      </p>
+    </header>
+
+    <!-- Input + Controls -->
+    <section class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+      <div class="flex flex-wrap items-center gap-2 justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium text-slate-900">Clause Input</span>
+          <span id="statePill"
+                class="inline-flex items-center rounded-full border border-slate-300 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+            Idle
+          </span>
+        </div>
+        <span id="toneSummary" class="text-[11px] text-slate-500"></span>
+      </div>
+
+      <textarea
+        id="clause"
+        class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        rows="4"
+        aria-label="Clause input for analysis"
+      >for the claim of the treaty is with the protection of the lands by the council within this venue under the natural law</textarea>
+
+      <div class="flex flex-wrap items-center gap-3 text-xs text-slate-700">
+        <label class="inline-flex items-center gap-1">
+          <span class="font-medium">BPM</span>
+          <input
+            type="number"
+            id="bpm"
+            value="84"
+            min="30"
+            max="240"
+            class="w-16 rounded-md border border-slate-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            aria-label="Beats per minute"
+          />
+        </label>
+
+        <label class="inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            id="met"
+            checked
+            class="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            aria-label="Enable metronome"
+          />
+          <span>Metronome</span>
+        </label>
+
+        <label class="inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            id="tones"
+            checked
+            class="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            aria-label="Play tones from prepositions"
+          />
+          <span>Play tones from prepositions</span>
+        </label>
+
+        <div class="flex flex-wrap gap-2 ml-auto">
+          <button
+            id="scanBtn"
+            class="inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-slate-800 active:translate-y-[1px]"
+            aria-label="Scan clause (Ctrl/⌘+Enter)"
+          >
+            Scan (Ctrl/⌘+Enter)
+          </button>
+          <button
+            id="rewriteBtn"
+            class="inline-flex items-center gap-1 rounded-full border border-indigo-600 bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-500 active:translate-y-[1px]"
+            aria-label="Rewrite and diff clause (Ctrl/⌘+Shift+Enter)"
+          >
+            Rewrite & Diff (Ctrl/⌘+Shift+Enter)
+          </button>
+          <button
+            id="clearBtn"
+            class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:translate-y-[1px]"
+            aria-label="Clear analysis"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div id="report" class="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-800 items-center"></div>
+    </section>
+
+    <!-- Main analysis grid -->
+    <section class="grid gap-4 lg:grid-cols-3">
+      <!-- Left 2 columns -->
+      <div class="lg:col-span-2 space-y-4">
+        <!-- Analysis Layers -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+          <div class="flex flex-wrap gap-2 items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              Analysis Layers
+              <span class="inline-flex items-center gap-1 text-[10px] font-normal text-slate-500">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>QSG
+                <span class="w-2 h-2 rounded-full bg-purple-500"></span>Logic
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>Kant
+              </span>
+            </h2>
+          </div>
+
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            <span id="chipQSG" class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5">
+              QSG: —
+            </span>
+            <span id="chipLogic" class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5">
+              Logic: —
+            </span>
+            <span id="chipKant" class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5">
+              Kant CI: —
+            </span>
+            <span id="chipBits" class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 font-mono">
+              State LFK: —
+            </span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-3 text-[11px]">
+            <!-- FOL Formula -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-900">First-Order Logic Skeleton</span>
+                <span class="font-mono text-[10px] text-slate-400">φ(x,…)</span>
+              </div>
+              <pre
+                id="formulaBox"
+                class="min-h-[120px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] leading-snug overflow-x-auto whitespace-pre-wrap"
+              >—</pre>
+            </div>
+
+            <!-- Notes -->
+            <div class="space-y-2">
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-slate-900">QSG · Structural Notes</span>
+                  <span id="qsgScore" class="font-mono text-[10px] text-slate-500">score: —</span>
+                </div>
+                <p id="qsgNotes" class="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 leading-snug">
+                  —
+                </p>
+              </div>
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-slate-900">Logic · Inference Notes</span>
+                  <span id="logicScore" class="font-mono text-[10px] text-slate-500">score: —</span>
+                </div>
+                <p id="logicNotes" class="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 leading-snug">
+                  —
+                </p>
+              </div>
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-slate-900">Kant CI · Moral Evaluation</span>
+                  <span id="kantScore" class="font-mono text-[10px] text-slate-500">score: —</span>
+                </div>
+                <p id="kantNotes" class="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 leading-snug">
+                  —
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clause Decomposition -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-900">Clause Decomposition</h2>
+            <span class="text-[10px] text-slate-500">Token-level view · prepositions as “wires”</span>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50">
+            <table class="min-w-full text-[11px]">
+              <thead class="bg-slate-100 text-slate-600">
+                <tr>
+                  <th class="px-2 py-1 text-left font-medium">#</th>
+                  <th class="px-2 py-1 text-left font-medium">Token</th>
+                  <th class="px-2 py-1 text-left font-medium">Role</th>
+                  <th class="px-2 py-1 text-left font-medium">Tag</th>
+                  <th class="px-2 py-1 text-left font-medium">Notes</th>
+                </tr>
+              </thead>
+              <tbody id="tokenTableBody" class="divide-y divide-slate-200"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Rewrite & Diff -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-900">Rewrite & Diff</h2>
+            <span class="text-[10px] text-slate-500">Knuth-style clarity pass</span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-3 text-[11px]">
+            <div class="space-y-1">
+              <span class="font-medium text-slate-800">Rewritten Clause</span>
+              <textarea
+                id="rewrittenClause"
+                class="w-full min-h-[80px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 leading-snug"
+                readonly
+              >—</textarea>
+            </div>
+            <div class="space-y-1">
+              <span class="font-medium text-slate-800">Diff (original → rewritten)</span>
+              <div
+                id="diffView"
+                class="diff min-h-[80px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 leading-snug text-[11px]"
+              >—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: Ruliad state + history -->
+      <div class="space-y-4">
+        <!-- Ruliad State Console -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-900">Ruliad State Console</h2>
+            <span class="text-[10px] text-slate-500 font-mono">2³ states over (Q, L, K)</span>
+          </div>
+
+          <p class="text-[11px] text-slate-600">
+            Bits are ordered as
+            <span class="font-mono">[Q, L, K]</span>. Each scan maps the clause into one of eight
+            discrete states in the local ruliad. Hover to inspect, click to pin explanation.
+          </p>
+
+          <div class="grid grid-cols-4 gap-2 text-[10px]">
+            <!-- 8 states: 000–111 -->
+            <button id="state-0" data-bits="000"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">000</div>
+              <div class="font-semibold text-slate-800">Incoherent</div>
+              <div class="text-[10px] text-slate-500">No stable grammar, logic, or CI.</div>
+            </button>
+            <button id="state-1" data-bits="001"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">001</div>
+              <div class="font-semibold text-slate-800">Moral Only</div>
+              <div class="text-[10px] text-slate-500">Ethos present, form unstable.</div>
+            </button>
+            <button id="state-2" data-bits="010"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">010</div>
+              <div class="font-semibold text-slate-800">Logic Only</div>
+              <div class="text-[10px] text-slate-500">Abstractly coherent, linguistically rough.</div>
+            </button>
+            <button id="state-3" data-bits="011"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">011</div>
+              <div class="font-semibold text-slate-800">Logic + Moral</div>
+              <div class="text-[10px] text-slate-500">Ethical principle with clear inference.</div>
+            </button>
+            <button id="state-4" data-bits="100"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">100</div>
+              <div class="font-semibold text-slate-800">QSG Only</div>
+              <div class="text-[10px] text-slate-500">Well-formed text, weak semantics.</div>
+            </button>
+            <button id="state-5" data-bits="101"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">101</div>
+              <div class="font-semibold text-slate-800">QSG + Moral</div>
+              <div class="text-[10px] text-slate-500">Readable and ethically oriented.</div>
+            </button>
+            <button id="state-6" data-bits="110"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight">
+              <div class="font-mono text-[10px] text-slate-500">110</div>
+              <div class="font-semibold text-slate-800">QSG + Logic</div>
+              <div class="text-[10px] text-slate-500">Clear sentence with sound inference.</div>
+            </button>
+            <button
+              id="state-7"
+              data-bits="111"
+              class="state-node rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1 text-left leading-tight"
+            >
+              <div class="font-mono text-[10px] text-slate-500">111</div>
+              <div class="font-semibold text-slate-800">Full Alignment</div>
+              <div class="text-[10px] text-slate-500">Grammar, logic, and CI all coherent.</div>
+            </button>
+          </div>
+
+          <div class="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px]">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-slate-900">Current State Explanation</span>
+              <span id="stateBitsLabel" class="font-mono text-[10px] text-slate-500">[Q,L,K] = —</span>
+            </div>
+            <p id="stateExplanation" class="mt-1 text-[11px] text-slate-700 leading-snug">
+              Run a scan to project the clause into the local 2³ ruliad state space.
+            </p>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-900">Scan History</h2>
+            <button
+              id="clearHistoryBtn"
+              class="text-[10px] rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-600 hover:bg-slate-50"
+            >
+              Clear history
+            </button>
+          </div>
+          <div id="historyList" class="space-y-1 max-h-64 overflow-y-auto text-[11px]">
+            <p class="text-slate-500 text-[11px]">No scans yet. Your runs will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer / Help -->
+    <footer class="text-[11px] text-slate-500 border-t border-slate-200 pt-3 mt-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span>
+          Keyboard: <span class="font-mono">Ctrl/⌘+Enter</span> = Scan,
+          <span class="font-mono">Ctrl/⌘+Shift+Enter</span> = Rewrite & Diff
+        </span>
+        <span class="font-mono">
+          Heuristics only – QSG / FOL / CI are approximated, not oracular.
+        </span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Tailwind JIT warmup (classes used dynamically in JS) -->
+  <div class="hidden">
+    <span class="bg-emerald-50 border-emerald-400 text-emerald-700"></span>
+    <span class="bg-amber-50 border-amber-400 text-amber-700"></span>
+    <span class="bg-rose-50 border-rose-400 text-rose-700"></span>
+    <span class="ring-2 ring-indigo-500 bg-indigo-100"></span>
+    <span class="border-slate-300 bg-slate-50 text-slate-700"></span>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // Utility functions – small, testable units (Knuth style)
+    // -------------------------------------------------------------
+
+    /**
+     * Normalize a clause: trim, collapse whitespace.
+     */
+    function normalizeClause(text) {
+      return (text || "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    /**
+     * Tokenize into simple space-separated tokens, preserving original and lowercase forms.
+     */
+    function tokenize(text) {
+      const norm = normalizeClause(text);
+      if (!norm) return [];
+      return norm.split(" ").map((raw, idx) => {
+        const clean = raw.replace(/^[^\w]+|[^\w]+$/g, "");
+        return {
+          index: idx,
+          raw,
+          clean,
+          lower: clean.toLowerCase(),
+        };
+      });
+    }
+
+    /**
+     * Classify each token into a coarse role.
+     */
+    function classifyTokens(tokens) {
+      const preps = new Set([
+        "of", "with", "by", "within", "under", "over", "into", "onto", "from",
+        "to", "for", "in", "on", "at", "through", "between", "before", "after",
+        "against", "toward", "inside", "outside", "beyond", "without", "around"
+      ]);
+
+      const verbs = new Set([
+        "is", "are", "shall", "must", "may", "will", "can", "protect", "protects",
+        "respect", "respects", "harm", "harms", "kill", "kills", "exploit", "exploits",
+        "help", "helps", "aid", "aids", "support", "supports"
+      ]);
+
+      const quantifiers = new Set(["every", "all", "any", "no", "none", "some", "each"]);
+
+      return tokens.map((t) => {
+        let tag = "WORD";
+        let role = "content";
+
+        if (preps.has(t.lower)) {
+          tag = "PREP";
+          role = "relational connector";
+        } else if (verbs.has(t.lower)) {
+          tag = "VERB";
+          role = "predicate / copula";
+        } else if (quantifiers.has(t.lower)) {
+          tag = "QUANT";
+          role = "quantifier";
+        } else if (/^(the|a|an)$/.test(t.lower)) {
+          tag = "DET";
+          role = "determiner";
+        } else if (/^(and|or|but)$/.test(t.lower)) {
+          tag = "CONJ";
+          role = "logical connector";
+        } else if (/^[0-9]+$/.test(t.lower)) {
+          tag = "NUM";
+          role = "numeric literal";
+        }
+
+        return { ...t, tag, role };
+      });
+    }
+
+    /**
+     * Compute simple QSG score.
+     */
+    function computeQSG(tokensWithTags) {
+      if (!tokensWithTags.length) {
+        return { score: 0, label: "Empty", notes: "No text provided." };
+      }
+
+      const len = tokensWithTags.length;
+      const verbs = tokensWithTags.filter((t) => t.tag === "VERB").length;
+      const preps = tokensWithTags.filter((t) => t.tag === "PREP").length;
+      const garbage = tokensWithTags.filter((t) => !t.clean).length;
+
+      let score = 0;
+      if (verbs > 0) score += 0.4;
+      if (len >= 6) score += 0.3;
+      if (preps > 0) score += 0.2;
+      if (garbage === 0) score += 0.1;
+
+      let label;
+      if (score >= 0.8) label = "Strong sentence-like structure";
+      else if (score >= 0.5) label = "Reasonably structured clause";
+      else if (score > 0) label = "Fragmentary or weakly structured";
+      else label = "Non-sentential text";
+
+      const notes = [
+        `Tokens: ${len}`,
+        `Verbs: ${verbs}`,
+        `Prepositions: ${preps}`,
+        garbage ? `Garbage tokens: ${garbage}` : "No obvious noise tokens",
+      ].join(" · ");
+
+      return { score, label, notes };
+    }
+
+    /**
+     * Build a coarse FOL-like skeleton from preposition segments (entity/relation view).
+     */
+    function buildFOL(tokensWithTags) {
+      if (!tokensWithTags.length) return { formula: "—", notes: "No tokens to analyse." };
+
+      const rawText = tokensWithTags.map((t) => t.clean || t.lower).join(" ");
+
+      const preps = new Set([
+        "of", "with", "by", "within", "under", "over", "into", "onto", "from",
+        "to", "for", "in", "on", "at", "through", "between", "before", "after",
+        "against", "toward", "inside", "outside", "beyond", "without", "around"
+      ]);
+
+      const prepIndices = [];
+      tokensWithTags.forEach((t, i) => {
+        if (preps.has(t.lower)) prepIndices.push(i);
+      });
+
+      if (!prepIndices.length) {
+        return {
+          formula: `ClauseAsPredicate(c): "${rawText}"`,
+          notes: "No explicit prepositions detected – treating the entire clause as a single predicate.",
+        };
+      }
+
+      const segments = [];
+      let current = [];
+      tokensWithTags.forEach((t) => {
+        if (preps.has(t.lower)) {
+          if (current.length) {
+            segments.push({ type: "phrase", tokens: current });
+            current = [];
+          }
+          segments.push({ type: "prep", tokens: [t] });
+        } else {
+          current.push(t);
+        }
+      });
+      if (current.length) {
+        segments.push({ type: "phrase", tokens: current });
+      }
+
+      function phraseToEntity(phraseTokens, index) {
+        const coreWords = phraseTokens
+          .filter((t) => !/^(the|a|an|and|or|but)$/.test(t.lower))
+          .map((t) => t.clean.toLowerCase())
+          .filter(Boolean);
+
+        if (!coreWords.length) return `x${index}`;
+
+        const head = coreWords[coreWords.length - 1];
+        const name = head.replace(/[^a-z0-9]/g, "");
+        return name || `x${index}`;
+      }
+
+      const entities = [];
+      const relations = [];
+
+      let entityIndex = 0;
+      let lastEntity = null;
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        if (seg.type === "phrase") {
+          const ent = phraseToEntity(seg.tokens, entityIndex++);
+          entities.push(ent);
+          if (lastEntity === null) {
+            lastEntity = ent;
+          }
+        } else if (seg.type === "prep") {
+          const prepWord = seg.tokens[0].lower;
+          const next = segments[i + 1];
+          if (next && next.type === "phrase") {
+            const ent = phraseToEntity(next.tokens, entityIndex++);
+            entities.push(ent);
+            const relationName = prepWord[0].toUpperCase() + prepWord.slice(1);
+            relations.push(`${relationName}(${lastEntity}, ${ent})`);
+            lastEntity = ent;
+            i++;
+          }
+        }
+      }
+
+      const uniqueEntities = Array.from(new Set(entities));
+      const varList = uniqueEntities.join(", ");
+      const entityPredicates = uniqueEntities.map((e) => `E(${e})`);
+
+      const allPredicates = entityPredicates.concat(relations);
+      const formula = `∃ ${varList} · ` + allPredicates.join(" ∧ ");
+
+      const notes = [
+        `Derived ${uniqueEntities.length} entity symbol(s): ${varList || "none"}`,
+        `Relations (${relations.length}): ${relations.join(", ") || "none"}`,
+      ].join(" · ");
+
+      return { formula, notes };
+    }
+
+    /**
+     * Logic coherence score (triad metric).
+     */
+    function computeLogic(tokensWithTags) {
+      if (!tokensWithTags.length) {
+        return { score: 0, label: "No logical structure", notes: "Empty clause." };
+      }
+
+      const verbs = tokensWithTags.filter((t) => t.tag === "VERB").length;
+      const preps = tokensWithTags.filter((t) => t.tag === "PREP").length;
+      const quant = tokensWithTags.filter((t) => t.tag === "QUANT").length;
+      const modals = tokensWithTags.filter((t) =>
+        ["must", "shall", "may", "can", "should"].includes(t.lower)
+      ).length;
+
+      let score = 0;
+      if (verbs > 0) score += 0.4;
+      if (preps > 0) score += 0.3;
+      if (quant + modals > 0) score += 0.3;
+
+      let label;
+      if (score >= 0.8) label = "Strong logical form";
+      else if (score >= 0.5) label = "Moderate logical form";
+      else if (score > 0) label = "Weak or implicit logical form";
+      else label = "No visible logical commitment";
+
+      const notes = [
+        `Verbs: ${verbs}`,
+        `Preposition-based relations: ${preps}`,
+        `Quantifiers: ${quant}`,
+        `Modals: ${modals}`,
+      ].join(" · ");
+
+      return { score, label, notes };
+    }
+
+    /**
+     * Kantian CI heuristic (scalar score).
+     */
+    function computeKant(tokensWithTags) {
+      if (!tokensWithTags.length) {
+        return { score: 0, label: "Unknown", notes: "No content for moral assessment." };
+      }
+
+      const badWords = new Set([
+        "kill", "kills", "harm", "harms", "exploit", "exploits", "deceive", "deceives",
+        "lie", "lies", "steal", "steals", "coerce", "coerces", "abuse", "abuses",
+        "manipulate", "manipulates", "dominate", "dominates", "enslave", "enslaves",
+        "torture", "tortures"
+      ]);
+
+      const goodWords = new Set([
+        "protect", "protects", "respect", "respects", "help", "helps", "aid", "aids",
+        "support", "supports", "care", "cares", "defend", "defends", "preserve", "preserves",
+        "honor", "honors", "safeguard", "safeguards", "benefit", "benefits"
+      ]);
+
+      let good = 0;
+      let bad = 0;
+      const hits = [];
+
+      tokensWithTags.forEach((t) => {
+        if (goodWords.has(t.lower)) {
+          good++;
+          hits.push(`+${t.clean}`);
+        } else if (badWords.has(t.lower)) {
+          bad++;
+          hits.push(`-${t.clean}`);
+        }
+      });
+
+      let score = 0.5 + (good - bad) * 0.1;
+      if (score < 0) score = 0;
+      if (score > 1) score = 1;
+
+      let label;
+      if (score >= 0.8) label = "Likely CI-aligned (protective / respectful orientation)";
+      else if (score >= 0.6) label = "Weakly CI-aligned (mildly protective / neutral)";
+      else if (score >= 0.4) label = "Ambiguous / mixed in moral orientation";
+      else if (score > 0) label = "Likely CI-violating (tendency toward instrumentalizing others)";
+      else label = "No explicit moral polarity detected";
+
+      const notes = [
+        `Good indicators: ${good}`,
+        `Bad indicators: ${bad}`,
+        hits.length ? `Polarity hits: ${hits.join(", ")}` : "No explicit moral polarity tokens found.",
+        "Heuristic: CI focuses on universalizability and treating persons as ends; this proxy only inspects local wording.",
+      ].join(" · ");
+
+      return { score, label, notes };
+    }
+
+    /**
+     * Tone summary from prepositions.
+     */
+    function buildToneSummary(tokensWithTags) {
+      const preps = tokensWithTags.filter((t) => t.tag === "PREP").map((t) => t.lower);
+      if (!preps.length) return "No preposition wiring detected.";
+      const freq = {};
+      preps.forEach((p) => (freq[p] = (freq[p] || 0) + 1));
+      const entries = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([p, c]) => `${p}×${c}`);
+      return `Preposition wiring: ${entries.join(", ")}`;
+    }
+
+    /**
+     * Knuth-style rewrite: conservative clarity pass.
+     */
+    function rewriteClause(text) {
+      const norm = normalizeClause(text);
+      if (!norm) return "—";
+
+      let rewritten = norm;
+
+      rewritten = rewritten.replace(
+        /\bfor the claim of the treaty is with the protection of the lands by the council within this venue under the natural law\b/i,
+        "the treaty claim provides for the protection of the lands by the council at this venue under natural law"
+      );
+
+      rewritten = rewritten.charAt(0).toUpperCase() + rewritten.slice(1);
+      if (!/[.!?]$/.test(rewritten)) {
+        rewritten += ".";
+      }
+
+      return rewritten;
+    }
+
+    /**
+     * Word-level diff.
+     */
+    function diffClauses(original, rewritten) {
+      const origTokens = tokenize(original).map((t) => t.raw);
+      const newTokens = tokenize(rewritten).map((t) => t.raw);
+
+      const m = origTokens.length;
+      const n = newTokens.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (origTokens[i - 1] === newTokens[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1] + 1;
+          } else {
+            dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+          }
+        }
+      }
+
+      const result = [];
+      let i = m;
+      let j = n;
+
+      while (i > 0 && j > 0) {
+        if (origTokens[i - 1] === newTokens[j - 1]) {
+          result.unshift(origTokens[i - 1]);
+          i--;
+          j--;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+          result.unshift(`<del>${origTokens[i - 1]}</del>`);
+          i--;
+        } else {
+          result.unshift(`<ins>${newTokens[j - 1]}</ins>`);
+          j--;
+        }
+      }
+      while (i > 0) {
+        result.unshift(`<del>${origTokens[i - 1]}</del>`);
+        i--;
+      }
+      while (j > 0) {
+        result.unshift(`<ins>${newTokens[j - 1]}</ins>`);
+        j--;
+      }
+
+      return result.join(" ");
+    }
+
+    /**
+     * Map QSG, Logic, Kant scores into 3 bits [Q,L,K] (0 or 1).
+     */
+    function scoresToBits(qsgScore, logicScore, kantScore) {
+      const q = qsgScore >= 0.6 ? 1 : 0;
+      const l = logicScore >= 0.6 ? 1 : 0;
+      const k = kantScore >= 0.6 ? 1 : 0;
+      return { q, l, k };
+    }
+
+    /**
+     * Explain bits in human terms.
+     */
+    function explainBits(bits, labels) {
+      const { q, l, k } = bits;
+      const active = [];
+      if (q) active.push("syntax/structure (QSG)");
+      if (l) active.push("logical coherence (FOL-ish)");
+      if (k) active.push("Kantian alignment (CI heuristic)");
+
+      if (!active.length) {
+        return "The clause does not register as syntactically clear, logically structured, or morally oriented under the current heuristics.";
+      }
+
+      const base = `The clause is positively classified on ${active.join(", ")}.`;
+      const extras = [];
+
+      if (q && l && k) {
+        extras.push("It occupies the highest triad state: well-formed, inferentially meaningful, and ethically protective.");
+      } else if (q && l && !k) {
+        extras.push("Form and inference are strong, but the wording does not clearly express an ethical commitment respecting persons as ends.");
+      } else if (q && !l && k) {
+        extras.push("The sentence reads clearly and is morally oriented, but the logical structure (quantifiers, conditionals) is weak or implicit.");
+      } else if (!q && l && k) {
+        extras.push("The moral and logical signals are present, but the surface sentence is noisy or structurally fragile.");
+      }
+
+      if (labels) {
+        extras.push(`QSG: ${labels.qsgLabel}. Logic: ${labels.logicLabel}. Kant CI: ${labels.kantLabel}.`);
+      }
+
+      return `${base} ${extras.join(" ")}`;
+    }
+
+    // -------------------------------------------------------------
+    // EXTRA: richer FOL + Kant engines from the second codebase
+    // -------------------------------------------------------------
+
+    const POSITIVE_ACTIONS = [
+      "help","protect","respect","aid","support","feed","heal","educate","shelter","care"
+    ];
+    const NEGATIVE_ACTIONS = [
+      "steal","lie","cheat","kill","murder","exploit","deceive","harm","abuse","manipulate"
+    ];
+    const INSTRUMENTAL_PHRASES = [
+      "use them","use people","exploit workers","treat them as tools","only as a means","just a means"
+    ];
+    const COERCION_WORDS = [
+      "force","coerce","compel","threaten","intimidate"
+    ];
+    const KANT_WEIGHTS = { universalizability: 1, humanity: 1, autonomy: 1 };
+
+    /**
+     * Logic-shape analyser on raw text (quantifiers, conditionals, etc.).
+     */
+    function analyzeLogicShape(text) {
+      const lower = text.toLowerCase();
+
+      const universal = /\b(all|every|any|no one|nobody|everyone)\b/.test(lower);
+      const existential = /\b(some|at least one|there exists)\b/.test(lower);
+      const conditional =
+        /\bif\b.*\bthen\b/.test(lower) ||
+        /\bprovided that\b/.test(lower) ||
+        /\bon condition that\b/.test(lower);
+      const biconditional =
+        /\bif and only if\b/.test(lower) ||
+        /\biff\b/.test(lower) ||
+        /\bjust in case\b/.test(lower);
+
+      const conj = /\b(and|as well as)\b/.test(lower);
+      const disj = /\b(or|either\b.*\bor\b)\b/.test(lower);
+
+      const negation = /\b(not|never|no\b|nothing)\b/.test(lower);
+      const doubleNegation =
+        /\bnot\b.*\bnot\b/.test(lower) ||
+        /\bnever\b.*\bnot\b/.test(lower);
+      const paradox =
+        /\balways\b.*\bnever\b/.test(lower) ||
+        /\bnever\b.*\balways\b/.test(lower);
+
+      let integrity = "stable";
+      if (paradox) integrity = "paradox";
+      else if (doubleNegation) integrity = "double_negation";
+      else if (negation) integrity = "negated";
+
+      const wellFormed = integrity === "stable" || integrity === "negated";
+
+      return {
+        universal, existential, conditional, biconditional,
+        conj, disj, negation, doubleNegation, paradox, integrity, wellFormed
+      };
+    }
+
+    function buildLogicalFormulaFromText(text, ls) {
+      const lower = text.toLowerCase();
+      let quant = "";
+      if (ls.universal) quant = "∀x ";
+      else if (ls.existential) quant = "∃x ";
+
+      const mappingLines = [];
+      let formula = "";
+
+      let condMatch = /if (.+?) then (.+)/i.exec(lower);
+      if (!condMatch) {
+        let alt = /(provided that|on condition that) (.+?), (.+)/i.exec(lower);
+        if (alt) condMatch = [alt[0], alt[2], alt[3]];
+      }
+
+      if (condMatch) {
+        const ante = condMatch[1].trim();
+        const cons = condMatch[2].trim();
+        if (ls.biconditional) {
+          formula = `${quant}(P(x) ↔ Q(x))`;
+        } else {
+          formula = `${quant}(P(x) → Q(x))`;
+        }
+        mappingLines.push(`P(x): "${ante}"`);
+        mappingLines.push(`Q(x): "${cons}"`);
+      } else {
+        if (ls.conj && ls.disj) {
+          formula = quant + "(P(x) ∧ Q(x) ∨ R(x))";
+        } else if (ls.conj) {
+          formula = quant + "(P(x) ∧ Q(x))";
+        } else if (ls.disj) {
+          formula = quant + "(P(x) ∨ Q(x))";
+        } else if (ls.negation) {
+          formula = quant + "¬P(x)";
+        } else {
+          formula = quant + "P(x)";
+        }
+        mappingLines.push(`P(x): "${text.trim()}"`);
+      }
+
+      if (!formula.trim()) {
+        formula = "P";
+        if (!mappingLines.length) mappingLines.push(`P: "${text.trim()}"`);
+      }
+
+      return { formula, mapping: mappingLines.join("\n") };
+    }
+
+    /**
+     * Kant axis analyser on raw text (U, H, A, world-test).
+     */
+    function analyzeKantAxes(text) {
+      const lower = text.toLowerCase();
+
+      const hasSelf = /\b(i|we|our|my)\b/.test(lower);
+      const selfBenefit = /\b(gain|benefit|advantage|profit)\b/.test(lower);
+      const hasSelfBenefit = hasSelf && selfBenefit;
+
+      const harmsOthers = NEGATIVE_ACTIONS.some(w => lower.includes(w));
+      const helpsOthers = POSITIVE_ACTIONS.some(w => lower.includes(w));
+      const mentionsOthers =
+        /\b(others|people|everyone|someone|strangers|workers|customers|friends|citizens|humans)\b/.test(lower);
+
+      const instrumental = INSTRUMENTAL_PHRASES.some(p => lower.includes(p));
+      const hasConsent =
+        /\b(consent|permission|voluntary|willing|agree|agreement)\b/.test(lower);
+      const coercive = COERCION_WORDS.some(w => lower.includes(w));
+
+      let uScore = 0;
+      let hScore = 0;
+      let aScore = 0;
+
+      if (harmsOthers && hasSelfBenefit) uScore = -1;
+      else if (helpsOthers && !harmsOthers) uScore = +1;
+
+      if (instrumental) hScore = -1;
+      else if (helpsOthers && mentionsOthers) hScore = +1;
+
+      if (coercive && !hasConsent) aScore = -1;
+      else if (hasConsent && !coercive) aScore = +1;
+
+      const ciScore =
+        KANT_WEIGHTS.universalizability * uScore +
+        KANT_WEIGHTS.humanity * hScore +
+        KANT_WEIGHTS.autonomy * aScore;
+
+      let worldSketch = "World-test: ";
+      if (harmsOthers && hasSelfBenefit) {
+        worldSketch += "If everyone acted this way, mutual exploitation and collapse of trust are likely.";
+      } else if (helpsOthers && mentionsOthers) {
+        worldSketch += "If everyone acted this way, cooperative benefit and mutual support would likely emerge.";
+      } else if (instrumental) {
+        worldSketch += "If generalized, people become tools; dignity and trust would erode.";
+      } else if (coercive) {
+        worldSketch += "If generalized, autonomy erodes and coercive social relations dominate.";
+      } else {
+        worldSketch += "No decisive world-level pathology detected under naive universalization.";
+      }
+
+      return {
+        uScore, hScore, aScore, ciScore,
+        harmsOthers, helpsOthers, mentionsOthers,
+        instrumental, hasConsent, coercive,
+        worldSketch
+      };
+    }
+
+    function buildKantMaxim(text) {
+      const lower = text.toLowerCase();
+      let situation = "I am in a relevant situation";
+      let action = text.trim();
+      let persons = "other persons";
+      let end = "some intended outcome";
+
+      if (lower.includes("customer")) persons = "customers";
+      else if (lower.includes("worker") || lower.includes("employee")) persons = "workers";
+      else if (lower.includes("friend")) persons = "friends";
+      else if (lower.includes("citizen")) persons = "citizens";
+
+      if (lower.includes("profit") || lower.includes("gain")) end = "my financial advantage";
+      else if (lower.includes("protect") || lower.includes("safety")) end = "their safety";
+      else if (lower.includes("respect")) end = "mutual respect";
+      else if (lower.includes("trust")) end = "social trust";
+
+      const condMatch = /if (.+?) then/i.exec(lower);
+      if (condMatch) situation = condMatch[1].trim();
+
+      const verbs = ["lie", "steal", "help", "protect", "exploit", "deceive"];
+      for (const v of verbs) {
+        if (lower.includes(v)) {
+          action = `I ${v} in this context`;
+          break;
+        }
+      }
+
+      return (
+        "Maxim schema:\n" +
+        "  Whenever I am in situation S:\n" +
+        `    S: ${situation}\n` +
+        "  I will perform action A toward persons P for end E:\n" +
+        `    A: ${action}\n` +
+        `    P: ${persons}\n` +
+        `    E: ${end}`
+      );
+    }
+
+    function kantAxesNotes(ax) {
+      const parts = [];
+      parts.push(`U (universalizability): ${ax.uScore > 0 ? "+" : ""}${ax.uScore}`);
+      parts.push(`H (humanity as end): ${ax.hScore > 0 ? "+" : ""}${ax.hScore}`);
+      parts.push(`A (autonomy/consent): ${ax.aScore > 0 ? "+" : ""}${ax.aScore}`);
+      parts.push(`CI_axes total: ${ax.ciScore > 0 ? "+" : ""}${ax.ciScore}`);
+      return parts.join(" · ");
+    }
+
+    function logicShapeNotes(ls) {
+      const flags = [];
+      if (ls.universal) flags.push("universal quantifier");
+      if (ls.existential) flags.push("existential quantifier");
+      if (ls.conditional) flags.push("conditional (→)");
+      if (ls.biconditional) flags.push("biconditional (↔)");
+      if (ls.conj) flags.push("conjunction (∧)");
+      if (ls.disj) flags.push("disjunction (∨)");
+      if (ls.negation) flags.push("negation");
+      if (ls.doubleNegation) flags.push("double negation pattern");
+      if (ls.paradox) flags.push("'always vs never' paradox");
+      if (!flags.length) return "No higher-order logical markers beyond clause-level counts.";
+
+      return "Logic-shape markers: " + flags.join(", ") + ".";
+    }
+
+    // -------------------------------------------------------------
+    // AUDIO ENGINE (metronome + preposition tones)
+    // -------------------------------------------------------------
+
+    const TONES = {
+      of: 216 * (1 / 1),
+      about: 216 * (9 / 8),
+      by: 216 * (81 / 64),
+      for: 216 * (4 / 3),
+      at: 216 * (3 / 2),
+      with: 216 * (27 / 16),
+      from: 216 * (243 / 128),
+      to: 216 * (2 / 1),
+      in: 216 * (5 / 4),
+      on: 216 * (6 / 5),
+      under: 216 * (7 / 4),
+      within: 216 * (15 / 8)
+    };
+
+    let audioCtx = null;
+    let masterGain = null;
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        audioCtx = new AC();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.9;
+        masterGain.connect(audioCtx.destination);
+      }
+    }
+
+    function tone(freq, dur = 0.5) {
+      ensureAudio();
+      if (!audioCtx || !masterGain) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.value = 0.001;
+      osc.connect(gain).connect(masterGain);
+      const t = audioCtx.currentTime;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(
+        0.18,
+        t + Math.max(0.2, dur * 0.5)
+      );
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.stop(t + dur + 0.02);
+    }
+
+    function click() {
+      tone(880, 0.06);
+    }
+
+    function clamp(val, lo, hi) {
+      return Math.min(hi, Math.max(lo, val));
+    }
+
+    async function playSeq(freqs, bpm, met) {
+      if (!freqs.length) return;
+      const clampedBpm = clamp(bpm, 30, 240);
+      const beat = 60000 / clampedBpm;
+      for (const f of freqs) {
+        if (met) click();
+        tone(f, Math.max(0.28, (beat * 0.85) / 1000));
+        await new Promise(res => setTimeout(res, beat));
+      }
+    }
+
+    // -------------------------------------------------------------
+    // DOM Wiring and Application Logic
+    // -------------------------------------------------------------
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const clauseEl = document.getElementById("clause");
+      const bpmEl = document.getElementById("bpm");
+      const metEl = document.getElementById("met");
+      const tonesEl = document.getElementById("tones");
+
+      const scanBtn = document.getElementById("scanBtn");
+      const rewriteBtn = document.getElementById("rewriteBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+      const statePill = document.getElementById("statePill");
+      const toneSummaryEl = document.getElementById("toneSummary");
+      const reportEl = document.getElementById("report");
+
+      const chipQSG = document.getElementById("chipQSG");
+      const chipLogic = document.getElementById("chipLogic");
+      const chipKant = document.getElementById("chipKant");
+      const chipBits = document.getElementById("chipBits");
+
+      const qsgScoreEl = document.getElementById("qsgScore");
+      const logicScoreEl = document.getElementById("logicScore");
+      const kantScoreEl = document.getElementById("kantScore");
+
+      const qsgNotesEl = document.getElementById("qsgNotes");
+      const logicNotesEl = document.getElementById("logicNotes");
+      const kantNotesEl = document.getElementById("kantNotes");
+
+      const formulaBox = document.getElementById("formulaBox");
+      const tokenTableBody = document.getElementById("tokenTableBody");
+
+      const rewrittenClauseEl = document.getElementById("rewrittenClause");
+      const diffViewEl = document.getElementById("diffView");
+
+      const stateBitsLabel = document.getElementById("stateBitsLabel");
+      const stateExplanationEl = document.getElementById("stateExplanation");
+      const historyList = document.getElementById("historyList");
+
+      const stateNodes = [];
+      for (let i = 0; i < 8; i++) {
+        const el = document.getElementById(`state-${i}`);
+        if (el) stateNodes.push(el);
+      }
+
+      const history = [];
+
+      function setStatePill(text, tone) {
+        statePill.textContent = text;
+        statePill.className =
+          "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium border";
+        if (tone === "work") {
+          statePill.classList.add("border-indigo-400", "bg-indigo-50", "text-indigo-700");
+        } else if (tone === "ok") {
+          statePill.classList.add("border-emerald-400", "bg-emerald-50", "text-emerald-700");
+        } else if (tone === "warn") {
+          statePill.classList.add("border-amber-400", "bg-amber-50", "text-amber-700");
+        } else if (tone === "bad") {
+          statePill.classList.add("border-rose-400", "bg-rose-50", "text-rose-700");
+        } else {
+          statePill.classList.add("border-slate-300", "bg-slate-50", "text-slate-700");
+        }
+      }
+
+      function formatScore(score) {
+        if (score == null || isNaN(score)) return "score: —";
+        return `score: ${(score * 100).toFixed(0)}/100`;
+      }
+
+      function setChipStyle(chip, score) {
+        chip.className = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5";
+        if (score >= 0.8) {
+          chip.classList.add("bg-emerald-50", "border-emerald-400", "text-emerald-700");
+        } else if (score >= 0.5) {
+          chip.classList.add("bg-amber-50", "border-amber-400", "text-amber-700");
+        } else if (score > 0) {
+          chip.classList.add("bg-rose-50", "border-rose-400", "text-rose-700");
+        } else {
+          chip.classList.add("bg-slate-50", "border-slate-300", "text-slate-700");
+        }
+      }
+
+      function renderTokenTable(tokensWithTags) {
+        tokenTableBody.innerHTML = "";
+        if (!tokensWithTags.length) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 5;
+          cell.className = "px-2 py-2 text-center text-slate-500";
+          cell.textContent = "No tokens – nothing to decompose.";
+          row.appendChild(cell);
+          tokenTableBody.appendChild(row);
+          return;
+        }
+
+        tokensWithTags.forEach((t) => {
+          const tr = document.createElement("tr");
+          tr.className = "bg-white";
+
+          const cIndex = document.createElement("td");
+          cIndex.className = "px-2 py-1 text-slate-500 font-mono";
+          cIndex.textContent = t.index;
+
+          const cToken = document.createElement("td");
+          cToken.className = "px-2 py-1 font-mono text-slate-900";
+          cToken.textContent = t.raw;
+
+          const cRole = document.createElement("td");
+          cRole.className = "px-2 py-1 text-slate-700";
+          cRole.textContent = t.role;
+
+          const cTag = document.createElement("td");
+          cTag.className = "px-2 py-1 text-slate-700 font-mono";
+          cTag.textContent = t.tag;
+
+          const cNotes = document.createElement("td");
+          cNotes.className = "px-2 py-1 text-slate-500";
+          if (t.tag === "PREP") {
+            cNotes.textContent = "Defines a relation / edge in the FOL graph.";
+          } else if (t.tag === "VERB") {
+            cNotes.textContent = "Carries predicate / action semantics.";
+          } else if (t.tag === "QUANT") {
+            cNotes.textContent = "Introduces a quantifier (∀/∃).";
+          } else if (t.tag === "CONJ") {
+            cNotes.textContent = "Connects subclauses (∧ / ∨).";
+          } else if (t.tag === "DET") {
+            cNotes.textContent = "Grammatical determiner.";
+          } else {
+            cNotes.textContent = "Lexical content token.";
+          }
+
+          tr.appendChild(cIndex);
+          tr.appendChild(cToken);
+          tr.appendChild(cRole);
+          tr.appendChild(cTag);
+          tr.appendChild(cNotes);
+
+          tokenTableBody.appendChild(tr);
+        });
+      }
+
+      function updateRuliadState(bits, labels) {
+        const index = bits.q + bits.l * 2 + bits.k * 4;
+        stateNodes.forEach((node, i) => {
+          node.classList.remove("ring-2", "ring-indigo-500", "bg-indigo-100");
+          if (i === index) {
+            node.classList.add("ring-2", "ring-indigo-500", "bg-indigo-100");
+          }
+        });
+
+        const bitStr = `[Q,L,K] = [${bits.q},${bits.l},${bits.k}]`;
+        stateBitsLabel.textContent = bitStr;
+        stateExplanationEl.textContent = explainBits(bits, labels);
+      }
+
+      function renderReport(tokensWithTags, qsg, logic, kant) {
+        reportEl.innerHTML = "";
+        const items = [];
+
+        const total = tokensWithTags.length;
+        const preps = tokensWithTags.filter((t) => t.tag === "PREP").length;
+        const verbs = tokensWithTags.filter((t) => t.tag === "VERB").length;
+
+        items.push(`Tokens: ${total}`);
+        items.push(`Preps: ${preps}`);
+        items.push(`Verbs: ${verbs}`);
+        items.push(`QSG: ${(qsg.score * 100).toFixed(0)}`);
+        items.push(`Logic: ${(logic.score * 100).toFixed(0)}`);
+        items.push(`CI: ${(kant.score * 100).toFixed(0)}`);
+
+        items.forEach((text) => {
+          const span = document.createElement("span");
+          span.className = "inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5";
+          span.textContent = text;
+          reportEl.appendChild(span);
+        });
+      }
+
+      function appendHistoryEntry(clauseText, bits, qsg, logic, kant, kantAxes) {
+        history.push({
+          timestamp: new Date(),
+          clause: normalizeClause(clauseText),
+          bits,
+          qsg,
+          logic,
+          kant,
+          kantAxes
+        });
+
+        historyList.innerHTML = "";
+        history
+          .slice()
+          .reverse()
+          .forEach((h, idx) => {
+            const row = document.createElement("div");
+            row.className =
+              "flex flex-col gap-0.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2";
+
+            const header = document.createElement("div");
+            header.className = "flex items-center justify-between gap-2";
+
+            const left = document.createElement("div");
+            left.className = "flex items-center gap-2";
+
+            const badge = document.createElement("span");
+            badge.className =
+              "inline-flex items-center justify-center rounded-full bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-white";
+            badge.textContent = `#${history.length - idx}`;
+
+            const time = document.createElement("span");
+            time.className = "text-[10px] text-slate-500";
+            time.textContent = h.timestamp.toLocaleTimeString();
+
+            left.appendChild(badge);
+            left.appendChild(time);
+
+            const bitsSpan = document.createElement("span");
+            bitsSpan.className = "font-mono text-[10px] text-slate-600";
+            bitsSpan.textContent = `[${h.bits.q},${h.bits.l},${h.bits.k}]`;
+
+            header.appendChild(left);
+            header.appendChild(bitsSpan);
+
+            const clause = document.createElement("div");
+            clause.className = "text-[11px] text-slate-800";
+            clause.textContent = h.clause;
+
+            const metrics = document.createElement("div");
+            metrics.className = "text-[10px] text-slate-500";
+            metrics.textContent =
+              `QSG ${(h.qsg.score * 100).toFixed(0)} · ` +
+              `Logic ${(h.logic.score * 100).toFixed(0)} · ` +
+              `CI ${(h.kant.score * 100).toFixed(0)} · ` +
+              `CI_axes ${(h.kantAxes.ciScore > 0 ? "+" : "")}${h.kantAxes.ciScore}`;
+
+            row.appendChild(header);
+            row.appendChild(clause);
+            row.appendChild(metrics);
+
+            historyList.appendChild(row);
+          });
+
+        if (!history.length) {
+          const p = document.createElement("p");
+          p.className = "text-slate-500 text-[11px]";
+          p.textContent = "No scans yet. Your runs will appear here.";
+          historyList.appendChild(p);
+        }
+      }
+
+      function clearAnalysis() {
+        reportEl.innerHTML = "";
+        tokenTableBody.innerHTML = "";
+        qsgNotesEl.textContent = "—";
+        logicNotesEl.textContent = "—";
+        kantNotesEl.textContent = "—";
+        formulaBox.textContent = "—";
+        rewrittenClauseEl.value = "—";
+        diffViewEl.textContent = "—";
+
+        qsgScoreEl.textContent = "score: —";
+        logicScoreEl.textContent = "score: —";
+        kantScoreEl.textContent = "score: —";
+
+        chipQSG.textContent = "QSG: —";
+        chipLogic.textContent = "Logic: —";
+        chipKant.textContent = "Kant CI: —";
+        chipBits.textContent = "State LFK: —";
+
+        setChipStyle(chipQSG, 0);
+        setChipStyle(chipLogic, 0);
+        setChipStyle(chipKant, 0);
+        chipBits.className =
+          "inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 font-mono";
+
+        updateRuliadState({ q: 0, l: 0, k: 0 }, null);
+        setStatePill("Idle", null);
+        toneSummaryEl.textContent = "";
+      }
+
+      // -----------------------------------------------------------
+      // SCAN PIPELINE
+      // -----------------------------------------------------------
+      async function runScan() {
+        const raw = clauseEl.value || "";
+        const norm = normalizeClause(raw);
+
+        if (!norm) {
+          clearAnalysis();
+          setStatePill("Empty clause", "warn");
+          return;
+        }
+
+        setStatePill("Scanning…", "work");
+
+        const tokens = tokenize(norm);
+        const tokensWithTags = classifyTokens(tokens);
+
+        const qsg = computeQSG(tokensWithTags);
+        const logic = computeLogic(tokensWithTags);
+        const kant = computeKant(tokensWithTags);
+
+        const fol = buildFOL(tokensWithTags);
+
+        // richer logic + Kant from raw text
+        const logicShape = analyzeLogicShape(norm);
+        const logicFormulaInfo = buildLogicalFormulaFromText(norm, logicShape);
+        const kantAxes = analyzeKantAxes(norm);
+        const kantMaxim = buildKantMaxim(norm);
+
+        // Tone summary + audio
+        toneSummaryEl.textContent = buildToneSummary(tokensWithTags);
+        const prepsForTone = tokensWithTags.filter(t => t.tag === "PREP").map(t => t.lower);
+        const freqs = prepsForTone.map(p => TONES[p]).filter(Boolean);
+
+        const bpm = parseInt(bpmEl.value, 10) || 84;
+        const metOn = metEl.checked;
+        const tonesOn = tonesEl.checked;
+
+        if (freqs.length) {
+          toneSummaryEl.textContent +=
+            " · tones: [" + freqs.map(f => f.toFixed(1)).join(", ") + "]";
+          if (tonesOn) {
+            // fire and forget async
+            playSeq(freqs, bpm, metOn);
+          }
+        }
+
+        renderReport(tokensWithTags, qsg, logic, kant);
+        renderTokenTable(tokensWithTags);
+
+        qsgScoreEl.textContent = formatScore(qsg.score);
+        logicScoreEl.textContent = formatScore(logic.score);
+        kantScoreEl.textContent = formatScore(kant.score);
+
+        qsgNotesEl.textContent = qsg.notes;
+
+        const extraLogic = logicShapeNotes(logicShape);
+        logicNotesEl.textContent = `${logic.notes} · ${extraLogic}`;
+
+        const kantAxesText = kantAxesNotes(kantAxes);
+        kantNotesEl.textContent =
+          kant.notes + "\n\n" +
+          kantAxesText + "\n" +
+          kantAxes.worldSketch + "\n\n" +
+          kantMaxim;
+
+        formulaBox.textContent =
+          fol.formula +
+          "\n\n// entity/relation view: " + fol.notes +
+          "\n\n" +
+          logicFormulaInfo.formula +
+          "\n\n// mapping\n" +
+          logicFormulaInfo.mapping;
+
+        chipQSG.textContent = `QSG: ${qsg.label}`;
+        chipLogic.textContent = `Logic: ${logic.label}`;
+        chipKant.textContent = `Kant CI: ${kant.label}`;
+        setChipStyle(chipQSG, qsg.score);
+        setChipStyle(chipLogic, logic.score);
+        setChipStyle(chipKant, kant.score);
+
+        const bits = scoresToBits(qsg.score, logic.score, kant.score);
+        const bitStr = `${bits.q}${bits.l}${bits.k}`;
+        chipBits.textContent = `State LFK: ${bitStr}`;
+        chipBits.className =
+          "inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 font-mono";
+        chipBits.classList.add("bg-indigo-50", "border-indigo-400", "text-indigo-700");
+
+        updateRuliadState(bits, {
+          qsgLabel: qsg.label,
+          logicLabel: logic.label,
+          kantLabel: kant.label,
+        });
+
+        appendHistoryEntry(norm, bits, qsg, logic, kant, kantAxes);
+
+        console.debug("[QSG-Console] Scan:", {
+          clause: norm,
+          bpm,
+          metOn,
+          tonesOn,
+          qsg,
+          logic,
+          kant,
+          bits,
+          logicShape,
+          kantAxes
+        });
+
+        if (kant.score >= 0.6 && qsg.score >= 0.6 && logic.score >= 0.6) {
+          setStatePill("Aligned triad (Q+L+K)", "ok");
+        } else if (kant.score < 0.4) {
+          setStatePill("Possible CI issue", "bad");
+        } else {
+          setStatePill("Partial alignment", "warn");
+        }
+      }
+
+      // -----------------------------------------------------------
+      // REWRITE & DIFF PIPELINE
+      // -----------------------------------------------------------
+      function runRewriteAndDiff() {
+        const raw = clauseEl.value || "";
+        const norm = normalizeClause(raw);
+
+        if (!norm) {
+          rewrittenClauseEl.value = "—";
+          diffViewEl.textContent = "No clause to rewrite.";
+          return;
+        }
+
+        const rewritten = rewriteClause(raw);
+        rewrittenClauseEl.value = rewritten;
+
+        const diffHtml = diffClauses(raw, rewritten);
+        diffViewEl.innerHTML = diffHtml;
+      }
+
+      // Event wiring
+      scanBtn.addEventListener("click", runScan);
+      rewriteBtn.addEventListener("click", () => {
+        runScan();
+        runRewriteAndDiff();
+      });
+      clearBtn.addEventListener("click", clearAnalysis);
+
+      clearHistoryBtn.addEventListener("click", () => {
+        history.length = 0;
+        historyList.innerHTML = "";
+        const p = document.createElement("p");
+        p.className = "text-slate-500 text-[11px]";
+        p.textContent = "History cleared.";
+        historyList.appendChild(p);
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", (ev) => {
+        const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+        const meta = isMac ? ev.metaKey : ev.ctrlKey;
+
+        if (meta && ev.key === "Enter" && !ev.shiftKey) {
+          ev.preventDefault();
+          runScan();
+        } else if (meta && ev.key === "Enter" && ev.shiftKey) {
+          ev.preventDefault();
+          runScan();
+          runRewriteAndDiff();
+        }
+      });
+
+      // Clicking ruliad state nodes to pin explanation
+      stateNodes.forEach((node, index) => {
+        node.addEventListener("click", () => {
+          const bitStr = node.getAttribute("data-bits") || "000";
+          const bits = {
+            q: parseInt(bitStr[0], 10) || 0,
+            l: parseInt(bitStr[1], 10) || 0,
+            k: parseInt(bitStr[2], 10) || 0,
+          };
+          updateRuliadState(bits, null);
+        });
+      });
+
+      // Initial scan
+      runScan();
+      runRewriteAndDiff();
+    });
+  </script>
+</body>
+</html>
