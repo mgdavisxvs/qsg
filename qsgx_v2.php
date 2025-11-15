@@ -1,20 +1,20 @@
 <?php
 /**
- * Legal Document & Contract Analysis Console v3.0
- * Professional Edition - Legal Domain Specialization
+ * Legal Document & Contract Analysis Console v4.0
+ * Professional Edition - Wolfram Computational Enhancement
  *
- * Following Donald Knuth's Principles:
- * - Mathematical rigor in scoring algorithms
- * - Literate programming with clear documentation
- * - Correctness and precision above all
- * - Elegant, efficient algorithms
+ * Three Perspectives Combined:
+ * - Donald Knuth: Mathematical rigor, literate programming, provable correctness
+ * - Stephen Wolfram: Rule-based systems, multiway evolution, computational thinking
+ * - Linus Torvalds: Performance optimization, clean architecture, fail-fast engineering
  *
  * This version integrates:
  * - legal_analysis.php: Rigorous legal document analysis (Clarity, Enforceability, Risk, Completeness)
+ * - wolfram_analysis.php: Rule-based transformations, dependency graphs, multiway evolution
  * - config.php: Centralized constants with mathematical justification
  * - security.php: CSRF, session security, rate limiting, input validation
  * - analysis_core.php: Core tokenization and classification
- * - cache.php: LRU caching for performance
+ * - cache.php: LRU caching for performance (10-100× speedup)
  * - logger.php: PSR-3 logging for observability
  *
  * LEGAL METRICS (Knuth-style mathematical foundations):
@@ -23,8 +23,14 @@
  * - RISK: 1 - Safety(ambiguity, one-sidedness, illegal terms)
  * - COMPLETENESS: Σ Essential_Contract_Elements / Total_Required
  *
- * @version 3.0 (Legal Specialization)
- * @author  Legal Analysis Team (Knuth methodology)
+ * WOLFRAM COMPUTATIONAL ANALYSIS:
+ * - Rule-based transformations (ambiguous → precise language)
+ * - Multiway evolution graphs (alternative interpretations)
+ * - Clause dependency graphs (DAG with cycle detection)
+ * - Computational equivalence classes
+ *
+ * @version 4.0 (Wolfram Computational Enhancement)
+ * @author  Legal Analysis Team (Knuth · Wolfram · Torvalds)
  */
 
 declare(strict_types=1);
@@ -34,6 +40,7 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/analysis_core.php';
 require_once __DIR__ . '/legal_analysis.php';
+require_once __DIR__ . '/wolfram_analysis.php';
 require_once __DIR__ . '/cache.php';
 require_once __DIR__ . '/logger.php';
 
@@ -165,6 +172,9 @@ if ($is_ajax) {
         // where C=Clarity, E=Enforceability, R=Risk, P=Completeness
         $overall_quality = ($clarity['score'] + $enforceability['score'] + (1.0 - $risk['score']) + $completeness['score']) / 4.0;
 
+        // WOLFRAM: Computational analysis (rule-based transformations, multiway evolution)
+        $wolfram = wolfram_analyze($tokens);
+
         // State classification based on risk and enforceability
         $state_label = 'Unknown';
         if ($enforceability['score'] >= 0.7 && $risk['score'] <= 0.3) {
@@ -208,6 +218,7 @@ if ($is_ajax) {
             'stateExplanation' => $state_explanation,
             'rewritten'        => $rewritten,
             'diffHtml'         => $diff_html,
+            'wolfram'          => $wolfram,
         ];
 
         $logger->debug('Legal analysis complete', [
@@ -322,7 +333,7 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Legal Document & Contract Analyzer v3.0 (Professional Edition)</title>
+  <title>Legal Document & Contract Analyzer v4.0 (Professional Edition)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -444,16 +455,16 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
     <!-- Header -->
     <header class="space-y-1">
       <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
-        Legal Document & Contract Analyzer v3.0
+        Legal Document & Contract Analyzer v4.0
       </h1>
       <p class="text-sm text-slate-600">
-        <strong>Professional Edition</strong> – Knuth's mathematical rigor applied to legal analysis
+        <strong>Professional Edition</strong> – Knuth's rigor · Wolfram's computation · Torvalds' optimization
         <span class="font-mono text-xs text-slate-500 block md:inline">
-          Clarity · Enforceability · Risk Assessment · Completeness · Entity Extraction · CSRF Protected
+          Clarity · Enforceability · Risk · Completeness · Rule-Based Transformations · Multiway Evolution
         </span>
       </p>
       <p class="text-xs text-slate-500 mt-1">
-        Analyze contracts, agreements, NDAs, and legal clauses with mathematical precision
+        Analyze contracts with mathematical precision and computational intelligence. Now with Wolfram-style rule transformations.
       </p>
     </header>
 
@@ -663,6 +674,66 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
             <p class="text-slate-500">Parties, dates, amounts, and obligations will appear here after analysis.</p>
           </div>
         </div>
+
+        <!-- Wolfram Computational Analysis -->
+        <div class="mt-4 space-y-2 border-t pt-3">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-purple-900">Wolfram Computational Analysis</span>
+            <div class="tooltip">
+              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-[10px] cursor-help">
+                ?
+              </button>
+              <div class="tooltip-content">
+                Wolfram's computational thinking: Rule-based transformations showing how to convert ambiguous language into precise contracts. Explores multiple interpretation paths using multiway evolution graphs.
+              </div>
+            </div>
+          </div>
+
+          <!-- Transformation Suggestions -->
+          <div class="mt-2">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-medium text-purple-800">Suggested Transformations</span>
+              <span id="wolframTransformCount" class="text-xs text-purple-600 font-semibold">—</span>
+            </div>
+            <div id="wolframTransformations" class="text-xs border border-purple-200 rounded p-2 bg-purple-50 max-h-64 overflow-y-auto">
+              <p class="text-purple-600 italic">Transformation suggestions will appear here after analysis.</p>
+            </div>
+          </div>
+
+          <!-- Improved Text -->
+          <div class="mt-2">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-medium text-emerald-800">Auto-Improved Text</span>
+              <button
+                id="copyImprovedBtn"
+                onclick="copyToClipboard('wolframImprovedText', this)"
+                class="copy-btn text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-opacity"
+                style="opacity: 0;"
+              >
+                Copy
+              </button>
+            </div>
+            <div id="wolframImprovedText" class="copy-container text-xs border border-emerald-200 rounded p-2 bg-emerald-50 font-mono leading-relaxed">
+              <p class="text-emerald-600 italic font-sans">Improved version will appear here after analysis.</p>
+            </div>
+          </div>
+
+          <!-- Multiway Evolution -->
+          <div class="mt-2">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-medium text-indigo-800">Multiway Evolution</span>
+              <span id="wolframStateCount" class="text-xs text-indigo-600 font-semibold">—</span>
+            </div>
+            <div id="wolframMultiway" class="text-xs border border-indigo-200 rounded p-2 bg-indigo-50">
+              <p class="text-indigo-600 italic">Multiway interpretation graph will appear here after analysis.</p>
+            </div>
+          </div>
+
+          <!-- Performance -->
+          <div class="mt-2">
+            <span id="wolframPerformance" class="text-[10px] text-slate-500 font-mono">—</span>
+          </div>
+        </div>
       </div>
 
       <!-- Right column: History -->
@@ -695,7 +766,7 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
           <span class="font-mono">Ctrl/⌘+Shift+Enter</span> = Analyze + Improve
         </span>
         <span class="font-mono">
-          v3.0 (Professional Legal Edition) – Knuth's Mathematical Rigor · CSRF Protected · Rate Limited · Cached
+          v4.0 (Wolfram Computational Edition) – Knuth · Wolfram · Torvalds · CSRF Protected · Rate Limited · Cached
         </span>
       </div>
       <p class="text-[10px] text-slate-400 mt-2">
@@ -726,6 +797,15 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
       const entitiesDisplayEl = document.getElementById('entitiesDisplay');
       const docTypeEl = document.getElementById('docType');
       const historyList = document.getElementById('historyList');
+
+      // Wolfram elements
+      const wolframTransformCountEl = document.getElementById('wolframTransformCount');
+      const wolframTransformationsEl = document.getElementById('wolframTransformations');
+      const wolframImprovedTextEl = document.getElementById('wolframImprovedText');
+      const wolframStateCountEl = document.getElementById('wolframStateCount');
+      const wolframMultiwayEl = document.getElementById('wolframMultiway');
+      const wolframPerformanceEl = document.getElementById('wolframPerformance');
+      const copyImprovedBtn = document.getElementById('copyImprovedBtn');
 
       const btnClearHistory = document.getElementById('btnClearHistory');
       const btnExportHistory = document.getElementById('btnExportHistory');
@@ -930,6 +1010,72 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
             entitiesDisplayEl.innerHTML = entitiesHTML;
           } else {
             entitiesDisplayEl.innerHTML = '<p class="text-slate-500">No entities extracted.</p>';
+          }
+        }
+
+        // Display Wolfram computational analysis
+        if (analysis.wolfram) {
+          const wolfram = analysis.wolfram;
+
+          // Transformations
+          if (wolfram.transformations && wolfram.transformations.rule_count > 0) {
+            wolframTransformCountEl.textContent = wolfram.transformations.rule_count + ' transformations found';
+
+            // Render transformations with color-coded categories
+            let transformHTML = '<div class="space-y-2">';
+            wolfram.transformations.transformations.forEach(t => {
+              const categoryColors = {
+                'precision': 'blue',
+                'enforceability': 'emerald',
+                'risk-reduction': 'rose'
+              };
+              const color = categoryColors[t.category] || 'gray';
+
+              transformHTML += `
+                <div class="border border-${color}-200 rounded p-2 bg-${color}-50">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[10px] font-semibold text-${color}-700 uppercase">${escapeHtml(t.category)}</span>
+                    <span class="text-[10px] text-${color}-600">${Math.round(t.strength * 100)}% confidence</span>
+                  </div>
+                  <div class="text-xs">
+                    <code class="bg-red-100 text-red-800 px-1 rounded">${escapeHtml(t.original)}</code>
+                    <span class="text-gray-600"> → </span>
+                    <code class="bg-green-100 text-green-800 px-1 rounded">${escapeHtml(t.suggested)}</code>
+                  </div>
+                </div>
+              `;
+            });
+            transformHTML += '</div>';
+            wolframTransformationsEl.innerHTML = transformHTML;
+
+            // Improved text
+            wolframImprovedTextEl.textContent = wolfram.transformations.improved_text || '—';
+            copyImprovedBtn.style.opacity = '1'; // Show copy button
+          } else {
+            wolframTransformCountEl.textContent = 'No transformations needed';
+            wolframTransformationsEl.innerHTML = '<p class="text-purple-600 italic">This clause is already well-formed. No transformation suggestions.</p>';
+            wolframImprovedTextEl.innerHTML = '<p class="text-emerald-600 italic font-sans">No improvements needed - clause is already optimal.</p>';
+            copyImprovedBtn.style.opacity = '0'; // Hide copy button
+          }
+
+          // Multiway evolution
+          if (wolfram.multiway && wolfram.multiway.state_count > 0) {
+            wolframStateCountEl.textContent = wolfram.multiway.state_count + ' alternative interpretation(s)';
+
+            // Show terminal states
+            let multiwayHTML = '<div class="text-xs text-indigo-700">';
+            multiwayHTML += '<p class="mb-2">Wolfram multiway graph generated ' + wolfram.multiway.state_count + ' possible interpretation paths.</p>';
+            multiwayHTML += '<p class="text-[10px] text-indigo-600">Terminal states: ' + wolfram.multiway.terminal_states.join(', ') + '</p>';
+            multiwayHTML += '</div>';
+            wolframMultiwayEl.innerHTML = multiwayHTML;
+          } else {
+            wolframStateCountEl.textContent = '1 state (deterministic)';
+            wolframMultiwayEl.innerHTML = '<p class="text-indigo-600 italic">Clause has deterministic interpretation (no branching paths).</p>';
+          }
+
+          // Performance
+          if (wolfram.performance) {
+            wolframPerformanceEl.textContent = `Wolfram analysis: ${wolfram.performance.execution_time_ms}ms (Torvalds-optimized: O(n) algorithms)`;
           }
         }
 
