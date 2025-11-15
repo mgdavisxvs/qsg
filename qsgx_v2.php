@@ -1,28 +1,39 @@
 <?php
 /**
- * QSG Ruliad Console v2.0
- * Improved Edition - Integrating Knuth, Wolfram, and Torvalds Perspectives
+ * Legal Document & Contract Analysis Console v3.0
+ * Professional Edition - Legal Domain Specialization
+ *
+ * Following Donald Knuth's Principles:
+ * - Mathematical rigor in scoring algorithms
+ * - Literate programming with clear documentation
+ * - Correctness and precision above all
+ * - Elegant, efficient algorithms
  *
  * This version integrates:
+ * - legal_analysis.php: Rigorous legal document analysis (Clarity, Enforceability, Risk, Completeness)
  * - config.php: Centralized constants with mathematical justification
  * - security.php: CSRF, session security, rate limiting, input validation
- * - analysis_core.php: Optimized core analysis functions
+ * - analysis_core.php: Core tokenization and classification
+ * - cache.php: LRU caching for performance
+ * - logger.php: PSR-3 logging for observability
  *
- * IMPROVEMENTS:
- * - KNUTH: Single-pass algorithms, documented constants, no duplication
- * - WOLFRAM: 2³ ruliad state space, computational transformations
- * - TORVALDS: Security hardening, error handling, performance optimization
+ * LEGAL METRICS (Knuth-style mathematical foundations):
+ * - CLARITY: α·Readability + β·Precision + γ·Structure (α+β+γ=1.0)
+ * - ENFORCEABILITY: ∏ Essential_Elements × Legal_Validity
+ * - RISK: 1 - Safety(ambiguity, one-sidedness, illegal terms)
+ * - COMPLETENESS: Σ Essential_Contract_Elements / Total_Required
  *
- * @version 2.0
- * @author  QSG Ruliad Team
+ * @version 3.0 (Legal Specialization)
+ * @author  Legal Analysis Team (Knuth methodology)
  */
 
 declare(strict_types=1);
 
-// Load all improved modules
+// Load all modules
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/analysis_core.php';
+require_once __DIR__ . '/legal_analysis.php';
 require_once __DIR__ . '/cache.php';
 require_once __DIR__ . '/logger.php';
 
@@ -47,8 +58,8 @@ if (!isset($_SESSION['history'])) {
     $_SESSION['history'] = [];
 }
 
-// Default clause for initial load
-$default_clause = "for the claim of the treaty is with the protection of the lands by the council within this venue under the natural law";
+// Default legal clause for initial load (NDA confidentiality provision example)
+$default_clause = "The Receiving Party shall hold and maintain the Confidential Information in strict confidence and shall not disclose such information to any third parties without the prior written consent of the Disclosing Party";
 
 /**
  * Check if this is an AJAX request
@@ -132,29 +143,48 @@ if ($is_ajax) {
             exit;
         }
 
-        $logger->debug('Cache MISS - computing analysis', ['clause_length' => strlen($clause)]);
+        $logger->debug('Cache MISS - computing legal analysis', ['clause_length' => strlen($clause)]);
 
-        // KNUTH: Optimized single-pass analysis
+        // KNUTH: Single-pass tokenization and classification
         $tokens = classify_tokens(tokenize_clause($clause));
-        $qsg    = compute_qsg($tokens);
-        $logic  = compute_logic($tokens);
-        $kant   = compute_kant($tokens);
-        $fol    = build_fol($tokens);
-        $tone   = build_tone_summary($tokens);
-        $ambiguity = compute_ambiguity($tokens);
-        $modal_profile = compute_modal_profile($tokens);
-        $aap = extract_aap($tokens);
 
-        // WOLFRAM: Compute ruliad state
-        $bits = scores_to_bits($qsg['score'], $logic['score'], $kant['score']);
-        $bit_string = $bits['q'] . $bits['l'] . $bits['k'];
+        // LEGAL ANALYSIS: Compute all four legal metrics
+        $clarity        = compute_legal_clarity($tokens);
+        $enforceability = compute_legal_enforceability($tokens);
+        $risk          = compute_legal_risk($tokens);
+        $completeness  = compute_legal_completeness($tokens);
 
-        $labels = [
-            'qsgLabel'   => $qsg['label'],
-            'logicLabel' => $logic['label'],
-            'kantLabel'  => $kant['label'],
-        ];
-        $state_explanation = explain_bits($bits, $labels);
+        // Extract contract entities (parties, obligations, dates, amounts)
+        $entities = extract_contract_entities($tokens);
+
+        // Detect document type
+        $doc_type = detect_document_type($tokens);
+
+        // KNUTH: Mathematical risk scoring (0-100 scale)
+        // Overall document quality: Q = (C + E + (1-R) + P) / 4
+        // where C=Clarity, E=Enforceability, R=Risk, P=Completeness
+        $overall_quality = ($clarity['score'] + $enforceability['score'] + (1.0 - $risk['score']) + $completeness['score']) / 4.0;
+
+        // State classification based on risk and enforceability
+        $state_label = 'Unknown';
+        if ($enforceability['score'] >= 0.7 && $risk['score'] <= 0.3) {
+            $state_label = 'Solid Contract';
+        } elseif ($enforceability['score'] >= 0.5 && $risk['score'] <= 0.5) {
+            $state_label = 'Acceptable';
+        } elseif ($risk['score'] > 0.6) {
+            $state_label = 'High Risk';
+        } else {
+            $state_label = 'Needs Review';
+        }
+
+        $state_explanation = sprintf(
+            '%s - Overall Quality: %.0f%%. Document Type: %s. %s %s',
+            $state_label,
+            $overall_quality * 100,
+            $doc_type,
+            $enforceability['score'] >= 0.7 ? 'Likely enforceable.' : 'May lack binding elements.',
+            $risk['score'] > 0.5 ? 'Contains risk factors requiring review.' : 'Risk profile acceptable.'
+        );
 
         // Rewriting (if requested)
         $rewritten = null;
@@ -167,45 +197,49 @@ if ($is_ajax) {
         $analysis = [
             'normalized'       => normalize_clause($clause),
             'tokens'           => $tokens,
-            'qsg'              => $qsg,
-            'logic'            => $logic,
-            'kant'             => $kant,
-            'fol'              => $fol,
-            'toneSummary'      => $tone,
-            'ambiguity'        => $ambiguity,
-            'modalProfile'     => $modal_profile,
-            'aap'              => $aap,
-            'bits'             => $bits,
-            'bitString'        => $bit_string,
+            'clarity'          => $clarity,
+            'enforceability'   => $enforceability,
+            'risk'             => $risk,
+            'completeness'     => $completeness,
+            'entities'         => $entities,
+            'docType'          => $doc_type,
+            'overallQuality'   => $overall_quality,
+            'stateLabel'       => $state_label,
             'stateExplanation' => $state_explanation,
             'rewritten'        => $rewritten,
             'diffHtml'         => $diff_html,
         ];
 
-        $logger->debug('Analysis complete', [
-            'qsg_score' => $qsg['score'],
-            'logic_score' => $logic['score'],
-            'kant_score' => $kant['score'],
-            'state' => $bit_string,
+        $logger->debug('Legal analysis complete', [
+            'clarity' => $clarity['score'],
+            'enforceability' => $enforceability['score'],
+            'risk' => $risk['score'],
+            'completeness' => $completeness['score'],
+            'overall_quality' => $overall_quality,
+            'doc_type' => $doc_type,
         ]);
 
-        // Determine state pill
-        if ($qsg['score'] >= 0.6 && $logic['score'] >= 0.6 && $kant['score'] >= 0.6) {
-            $state_pill = ['text' => 'Aligned triad (Q+L+K)', 'tone' => 'ok'];
-        } elseif ($kant['score'] < 0.4) {
-            $state_pill = ['text' => 'Possible CI issue', 'tone' => 'bad'];
+        // Determine state pill based on legal metrics
+        if ($overall_quality >= 0.75 && $risk['score'] <= 0.3) {
+            $state_pill = ['text' => 'Solid Contract', 'tone' => 'ok'];
+        } elseif ($risk['score'] > 0.6) {
+            $state_pill = ['text' => 'High Risk', 'tone' => 'bad'];
+        } elseif ($overall_quality >= 0.5) {
+            $state_pill = ['text' => 'Acceptable', 'tone' => 'warn'];
         } else {
-            $state_pill = ['text' => 'Partial alignment', 'tone' => 'warn'];
+            $state_pill = ['text' => 'Needs Review', 'tone' => 'warn'];
         }
 
         // TORVALDS: Add to bounded history
         $entry = [
-            'timestamp' => time(),
-            'clause'    => $analysis['normalized'],
-            'bits'      => $bits,
-            'qsg'       => $qsg['score'],
-            'logic'     => $logic['score'],
-            'kant'      => $kant['score'],
+            'timestamp'      => time(),
+            'clause'         => $analysis['normalized'],
+            'clarity'        => $clarity['score'],
+            'enforceability' => $enforceability['score'],
+            'risk'           => $risk['score'],
+            'completeness'   => $completeness['score'],
+            'quality'        => $overall_quality,
+            'docType'        => $doc_type,
         ];
 
         if (count($_SESSION['history']) >= MAX_HISTORY_ITEMS) {
@@ -288,7 +322,7 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>QSG Logic &amp; Kant Lab – Ruliad Console v2.0 (Improved Edition)</title>
+  <title>Legal Document & Contract Analyzer v3.0 (Professional Edition)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -410,13 +444,16 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
     <!-- Header -->
     <header class="space-y-1">
       <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
-        Quantum Syntax Grammar · Logic · Kant · Ruliad Console v2.0
+        Legal Document & Contract Analyzer v3.0
       </h1>
       <p class="text-sm text-slate-600">
-        <strong>Improved Edition</strong> – Knuth (algorithms) · Wolfram (ruliad) · Torvalds (security)
+        <strong>Professional Edition</strong> – Knuth's mathematical rigor applied to legal analysis
         <span class="font-mono text-xs text-slate-500 block md:inline">
-          QSG (grammar) · FOL (logic) · CI (Kant) · 2³ ruliad state space · CSRF protected
+          Clarity · Enforceability · Risk Assessment · Completeness · Entity Extraction · CSRF Protected
         </span>
+      </p>
+      <p class="text-xs text-slate-500 mt-1">
+        Analyze contracts, agreements, NDAs, and legal clauses with mathematical precision
       </p>
     </header>
 
@@ -428,75 +465,48 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
 
         <div class="flex flex-wrap items-center gap-2 justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-900">Clause Input</span>
+            <span class="text-sm font-medium text-slate-900">Legal Clause / Contract Provision</span>
             <span id="statePill"
               class="<?php echo state_pill_class($state_pill['tone']); ?>">
               <?php echo htmlspecialchars($state_pill['text'], ENT_QUOTES, 'UTF-8'); ?>
             </span>
           </div>
-          <span id="toneSummary" class="text-[11px] text-slate-500">
-            No preposition wiring detected.
+          <span id="docType" class="text-[11px] text-slate-500 font-mono">
+            Document type will appear here
           </span>
         </div>
 
         <textarea
           id="clause"
           name="clause"
-          class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          rows="4"
-          placeholder="Enter clause for analysis..."
-          aria-label="Clause input for analysis"
+          class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+          rows="5"
+          placeholder="Enter contract clause, NDA provision, or legal text for analysis...&#10;Example: The Receiving Party shall maintain all Confidential Information in strict confidence..."
+          aria-label="Legal clause input for analysis"
         ><?php echo htmlspecialchars($initial_clause, ENT_QUOTES, 'UTF-8'); ?></textarea>
 
-        <!-- Mobile-responsive controls -->
+        <!-- Simplified controls for legal analysis -->
         <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 text-xs text-slate-700">
-          <!-- Options row -->
+          <!-- Analysis options -->
           <div class="flex flex-wrap items-center gap-3">
-            <label class="inline-flex items-center gap-1">
-              <span class="font-medium">BPM</span>
+            <label class="inline-flex items-center gap-1 touch-manipulation">
               <input
-                type="number"
-                name="bpm"
-                id="bpm"
-                value="84"
-                min="30"
-                max="240"
-                class="w-20 sm:w-16 rounded-md border border-slate-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                aria-label="Beats per minute"
+                type="checkbox"
+                id="extractEntities"
+                checked
+                class="h-4 w-4 sm:h-3 sm:w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
+              <span>Extract entities (parties, dates, amounts)</span>
             </label>
 
             <label class="inline-flex items-center gap-1 touch-manipulation">
               <input
                 type="checkbox"
-                name="met"
-                id="met"
-                class="h-4 w-4 sm:h-3 sm:w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                aria-label="Enable metronome (conceptual)"
+                id="showRiskFactors"
+                checked
+                class="h-4 w-4 sm:h-3 sm:w-3 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
               />
-              <span>Metronome</span>
-            </label>
-
-            <label class="inline-flex items-center gap-1 touch-manipulation">
-              <input
-                type="checkbox"
-                name="tones"
-                id="tones"
-                class="h-4 w-4 sm:h-3 sm:w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                aria-label="Play tones from prepositions (conceptual)"
-              />
-              <span class="hidden sm:inline">Play tones from prepositions</span>
-              <span class="sm:hidden">Tones</span>
-            </label>
-
-            <label class="inline-flex items-center gap-1 touch-manipulation">
-              <input
-                type="checkbox"
-                id="autoScan"
-                class="h-4 w-4 sm:h-3 sm:w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span class="hidden sm:inline">Auto-scan while typing</span>
-              <span class="sm:hidden">Auto-scan</span>
+              <span>Highlight risk factors</span>
             </label>
           </div>
 
@@ -505,20 +515,26 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
             <button
               type="button"
               data-action="scan"
-              class="btn-scan inline-flex items-center justify-center gap-1 rounded-full border border-slate-800 bg-slate-900 px-4 py-2 sm:px-3 sm:py-1 text-xs font-medium text-white shadow-sm hover:bg-slate-800 active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Scan clause (Ctrl/⌘+Enter)"
+              class="btn-scan inline-flex items-center justify-center gap-1 rounded-full border border-indigo-700 bg-indigo-700 px-4 py-2 sm:px-3 sm:py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-600 active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Analyze clause (Ctrl/⌘+Enter)"
             >
-              <span class="hidden sm:inline">Scan (Ctrl/⌘+Enter)</span>
-              <span class="sm:hidden">Scan</span>
+              <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+              <span class="hidden sm:inline">Analyze (Ctrl/⌘+Enter)</span>
+              <span class="sm:hidden">Analyze</span>
             </button>
             <button
               type="button"
               data-action="scan_rewrite"
-              class="btn-scan inline-flex items-center justify-center gap-1 rounded-full border border-indigo-600 bg-indigo-600 px-4 py-2 sm:px-3 sm:py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-500 active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Scan, rewrite and diff clause (Ctrl/⌘+Shift+Enter)"
+              class="btn-scan inline-flex items-center justify-center gap-1 rounded-full border border-emerald-700 bg-emerald-700 px-4 py-2 sm:px-3 sm:py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-600 active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Analyze + Improve clause (Ctrl/⌘+Shift+Enter)"
             >
-              <span class="hidden sm:inline">Scan + Rewrite &amp; Diff</span>
-              <span class="sm:hidden">Scan + Rewrite</span>
+              <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              <span class="hidden sm:inline">Analyze + Improve</span>
+              <span class="sm:hidden">Improve</span>
             </button>
             <button
               type="button"
@@ -561,86 +577,91 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
           Analysis results will appear here. Use the "Scan" button to analyze your clause.
         </p>
 
-        <!-- QSG Score with tooltip -->
+        <!-- Clarity Score -->
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-900">QSG Score</span>
+            <span class="text-xs font-semibold text-blue-900">Clarity Score</span>
             <div class="tooltip">
-              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-[10px] cursor-help">
+              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 text-[10px] cursor-help">
                 ?
               </button>
               <div class="tooltip-content">
-                Quantum Syntax Grammar measures structural well-formedness based on preposition usage, verb placement, and clause length. Higher scores (≥60) indicate better grammar.
+                Knuth's formula: Clarity = α·Readability + β·Precision + γ·Structure (α+β+γ=1.0). Measures readability (optimal 25-35 words), precision ("shall" vs "may"), and structural elements (definitions, enumeration). Higher ≥70% = Clear.
               </div>
             </div>
-            <span id="qsgScore" class="text-xs text-slate-500 ml-auto">—</span>
+            <span id="clarityScore" class="text-xs text-blue-600 ml-auto font-semibold">—</span>
           </div>
-          <p id="qsgNotes" class="text-xs text-slate-600 border rounded p-2 bg-slate-50">—</p>
+          <p id="clarityNotes" class="text-xs text-slate-600 border border-blue-200 rounded p-2 bg-blue-50">—</p>
         </div>
 
-        <!-- Logic Score with tooltip -->
+        <!-- Enforceability Score -->
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-900">Logic Score</span>
+            <span class="text-xs font-semibold text-emerald-900">Enforceability Score</span>
             <div class="tooltip">
-              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-[10px] cursor-help">
+              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-[10px] cursor-help">
                 ?
               </button>
               <div class="tooltip-content">
-                Evaluates logical coherence and inference potential. Considers verbs, quantifiers, and logical connectives. Higher scores (≥60) indicate stronger logical structure.
+                Contract law essentials: binding language ("shall", "must"), consideration indicators, identified parties, legal formality. Theorem: E = ∏ Essential_Elements × Validity. Higher ≥70% = Enforceable.
               </div>
             </div>
-            <span id="logicScore" class="text-xs text-slate-500 ml-auto">—</span>
+            <span id="enforceabilityScore" class="text-xs text-emerald-600 ml-auto font-semibold">—</span>
           </div>
-          <p id="logicNotes" class="text-xs text-slate-600 border rounded p-2 bg-slate-50">—</p>
+          <p id="enforceabilityNotes" class="text-xs text-slate-600 border border-emerald-200 rounded p-2 bg-emerald-50">—</p>
         </div>
 
-        <!-- Kant CI Score with tooltip -->
+        <!-- Risk Score -->
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-900">Kant CI Score</span>
+            <span class="text-xs font-semibold text-rose-900">Risk Score</span>
             <div class="tooltip">
-              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-[10px] cursor-help">
+              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] cursor-help">
                 ?
               </button>
               <div class="tooltip-content">
-                Assesses alignment with Kant's Categorical Imperative ethics. Detects protective vs harmful language. Higher scores (≥60) indicate ethical alignment.
+                Risk = 1 - Safety. Detects ambiguous terms, one-sided language ("sole discretion"), and problematic clauses. Lower ≤30% = Low Risk. Higher ≥60% = High Risk requiring legal review.
               </div>
             </div>
-            <span id="kantScore" class="text-xs text-slate-500 ml-auto">—</span>
+            <span id="riskScore" class="text-xs text-rose-600 ml-auto font-semibold">—</span>
           </div>
-          <p id="kantNotes" class="text-xs text-slate-600 border rounded p-2 bg-slate-50">—</p>
+          <p id="riskNotes" class="text-xs text-slate-600 border border-rose-200 rounded p-2 bg-rose-50">—</p>
         </div>
 
-        <!-- FOL Formula with copy button -->
+        <!-- Completeness Score -->
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-900">First-Order Logic Formula</span>
+            <span class="text-xs font-semibold text-amber-900">Completeness Score</span>
             <div class="tooltip">
-              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-[10px] cursor-help">
+              <button class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-700 text-[10px] cursor-help">
                 ?
               </button>
               <div class="tooltip-content">
-                Formal logic representation using existential quantifiers (∃), predicates, and relations extracted from the clause structure.
+                Checks for essential contract elements: parties, obligations, consideration, term/duration, termination, governing law. Completeness = Σ Present_Elements / Total_Required. Higher ≥80% = Complete.
               </div>
             </div>
+            <span id="completenessScore" class="text-xs text-amber-600 ml-auto font-semibold">—</span>
           </div>
-          <div class="relative copy-container">
-            <pre id="formulaBox" class="text-xs text-slate-800 border rounded p-2 bg-slate-50 overflow-x-auto pr-10">—</pre>
-            <button onclick="copyToClipboard('formulaBox', this)" class="copy-btn absolute top-2 right-2 p-1.5 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-600 transition-opacity" title="Copy formula">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-            </button>
-          </div>
+          <p id="completenessNotes" class="text-xs text-slate-600 border border-amber-200 rounded p-2 bg-amber-50">—</p>
         </div>
 
-        <!-- State Explanation -->
-        <div class="mt-4 space-y-2">
-          <span class="text-xs font-semibold text-slate-900">Ruliad State Explanation</span>
-          <p id="stateExplanation" class="text-xs text-slate-700 border rounded p-2 bg-slate-50">
-            Run a scan to project the clause into the 2³ ruliad state space.
+        <!-- Overall Quality -->
+        <div class="mt-4 space-y-2 pt-3 border-t border-slate-200">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-slate-900">Overall Quality</span>
+            <span id="overallQuality" class="text-sm text-indigo-700 ml-auto font-bold">—</span>
+          </div>
+          <p id="stateExplanation" class="text-xs text-slate-700 border rounded p-2 bg-gradient-to-r from-indigo-50 to-purple-50">
+            Analyze a clause to see quality assessment and document type classification.
           </p>
+        </div>
+
+        <!-- Extracted Entities -->
+        <div class="mt-4 space-y-2">
+          <span class="text-xs font-semibold text-slate-900">Extracted Entities</span>
+          <div id="entitiesDisplay" class="text-xs text-slate-600 border rounded p-2 bg-slate-50 space-y-1">
+            <p class="text-slate-500">Parties, dates, amounts, and obligations will appear here after analysis.</p>
+          </div>
         </div>
       </div>
 
@@ -670,13 +691,17 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
       <div class="flex flex-wrap items-center justify-between gap-2">
         <span>
           Keyboard:
-          <span class="font-mono">Ctrl/⌘+Enter</span> = Scan,
-          <span class="font-mono">Ctrl/⌘+Shift+Enter</span> = Scan + Rewrite
+          <span class="font-mono">Ctrl/⌘+Enter</span> = Analyze,
+          <span class="font-mono">Ctrl/⌘+Shift+Enter</span> = Analyze + Improve
         </span>
         <span class="font-mono">
-          v2.0 (Improved Edition) – CSRF Protected · Rate Limited · Optimized
+          v3.0 (Professional Legal Edition) – Knuth's Mathematical Rigor · CSRF Protected · Rate Limited · Cached
         </span>
       </div>
+      <p class="text-[10px] text-slate-400 mt-2">
+        <strong>Disclaimer:</strong> This tool provides automated analysis based on linguistic and structural patterns.
+        It is not a substitute for legal advice. Always consult a qualified attorney for legal matters.
+      </p>
     </footer>
   </div>
 
@@ -688,14 +713,18 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
       const statePill = document.getElementById('statePill');
       const toneSummary = document.getElementById('toneSummary');
 
-      const qsgScoreEl = document.getElementById('qsgScore');
-      const qsgNotesEl = document.getElementById('qsgNotes');
-      const logicScoreEl = document.getElementById('logicScore');
-      const logicNotesEl = document.getElementById('logicNotes');
-      const kantScoreEl = document.getElementById('kantScore');
-      const kantNotesEl = document.getElementById('kantNotes');
-      const formulaBox = document.getElementById('formulaBox');
+      const clarityScoreEl = document.getElementById('clarityScore');
+      const clarityNotesEl = document.getElementById('clarityNotes');
+      const enforceabilityScoreEl = document.getElementById('enforceabilityScore');
+      const enforceabilityNotesEl = document.getElementById('enforceabilityNotes');
+      const riskScoreEl = document.getElementById('riskScore');
+      const riskNotesEl = document.getElementById('riskNotes');
+      const completenessScoreEl = document.getElementById('completenessScore');
+      const completenessNotesEl = document.getElementById('completenessNotes');
+      const overallQualityEl = document.getElementById('overallQuality');
       const stateExplanationEl = document.getElementById('stateExplanation');
+      const entitiesDisplayEl = document.getElementById('entitiesDisplay');
+      const docTypeEl = document.getElementById('docType');
       const historyList = document.getElementById('historyList');
 
       const btnClearHistory = document.getElementById('btnClearHistory');
@@ -854,34 +883,84 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
         statePill.textContent = state.text || 'Done';
         statePill.className = 'inline-flex items-center rounded-full border border-' + (state.tone === 'ok' ? 'emerald' : state.tone === 'warn' ? 'amber' : state.tone === 'bad' ? 'rose' : 'slate') + '-400 bg-' + (state.tone === 'ok' ? 'emerald' : state.tone === 'warn' ? 'amber' : state.tone === 'bad' ? 'rose' : 'slate') + '-50 text-' + (state.tone === 'ok' ? 'emerald' : state.tone === 'warn' ? 'amber' : state.tone === 'bad' ? 'rose' : 'slate') + '-700 px-2 py-0.5 text-[11px] font-medium';
 
-        toneSummary.textContent = analysis.toneSummary || '';
+        // Update document type
+        docTypeEl.textContent = analysis.docType || 'Unknown';
 
-        qsgScoreEl.textContent = formatScore(analysis.qsg?.score);
-        qsgNotesEl.textContent = analysis.qsg?.notes || '—';
-        logicScoreEl.textContent = formatScore(analysis.logic?.score);
-        logicNotesEl.textContent = analysis.logic?.notes || '—';
-        kantScoreEl.textContent = formatScore(analysis.kant?.score);
-        kantNotesEl.textContent = analysis.kant?.notes || '—';
+        // Update all legal metric scores
+        clarityScoreEl.textContent = formatScore(analysis.clarity?.score);
+        clarityNotesEl.textContent = analysis.clarity?.notes || '—';
 
-        formulaBox.textContent = (analysis.fol?.formula || '—') + '\n\n// ' + (analysis.fol?.notes || '');
+        enforceabilityScoreEl.textContent = formatScore(analysis.enforceability?.score);
+        enforceabilityNotesEl.textContent = analysis.enforceability?.notes || '—';
+
+        riskScoreEl.textContent = formatScore(analysis.risk?.score);
+        riskNotesEl.textContent = analysis.risk?.notes || '—';
+
+        completenessScoreEl.textContent = formatScore(analysis.completeness?.score);
+        completenessNotesEl.textContent = analysis.completeness?.notes || '—';
+
+        overallQualityEl.textContent = formatScore(analysis.overallQuality);
         stateExplanationEl.textContent = analysis.stateExplanation || '';
+
+        // Display extracted entities
+        if (analysis.entities) {
+          let entitiesHTML = '';
+
+          if (analysis.entities.parties && analysis.entities.parties.length > 0) {
+            entitiesHTML += '<div><strong class="text-indigo-700">Parties:</strong> ' + analysis.entities.parties.join(', ') + '</div>';
+          }
+
+          if (analysis.entities.dates && analysis.entities.dates.length > 0) {
+            entitiesHTML += '<div><strong class="text-emerald-700">Dates:</strong> ' + analysis.entities.dates.join(', ') + '</div>';
+          }
+
+          if (analysis.entities.amounts && analysis.entities.amounts.length > 0) {
+            entitiesHTML += '<div><strong class="text-amber-700">Amounts:</strong> ' + analysis.entities.amounts.join(', ') + '</div>';
+          }
+
+          if (analysis.entities.obligations && analysis.entities.obligations.length > 0) {
+            entitiesHTML += '<div><strong class="text-rose-700">Obligations:</strong><ul class="list-disc ml-4 mt-1">';
+            analysis.entities.obligations.forEach(obl => {
+              entitiesHTML += '<li>' + escapeHtml(obl) + '</li>';
+            });
+            entitiesHTML += '</ul></div>';
+          }
+
+          if (entitiesHTML) {
+            entitiesDisplayEl.innerHTML = entitiesHTML;
+          } else {
+            entitiesDisplayEl.innerHTML = '<p class="text-slate-500">No entities extracted.</p>';
+          }
+        }
 
         renderHistory(data.history);
       }
 
       function renderHistory(history) {
         if (!history || !history.length) {
-          historyList.innerHTML = '<p class="text-xs text-slate-500">No scans yet.</p>';
+          historyList.innerHTML = '<p class="text-xs text-slate-500">No analyses yet.</p>';
           return;
         }
 
         let html = '<div class="space-y-2">';
         history.forEach((h, idx) => {
+          const qualityColor = h.quality >= 0.75 ? 'text-emerald-600' :
+                              h.quality >= 0.5 ? 'text-amber-600' : 'text-rose-600';
+
           html += `
-            <div class="border rounded p-2 bg-slate-50 text-xs">
-              <div class="font-mono text-[10px] text-slate-500">#${history.length - idx}</div>
-              <div class="text-slate-800 mt-1">${escapeHtml(h.clause)}</div>
-              <div class="text-slate-500 mt-1">Q:${Math.round(h.qsg * 100)} L:${Math.round(h.logic * 100)} K:${Math.round(h.kant * 100)}</div>
+            <div class="border rounded p-2 bg-slate-50 text-xs hover:bg-slate-100 cursor-pointer">
+              <div class="flex items-center justify-between">
+                <div class="font-mono text-[10px] text-slate-500">#${history.length - idx}</div>
+                <div class="font-mono text-[10px] ${qualityColor} font-semibold">Q: ${Math.round(h.quality * 100)}%</div>
+              </div>
+              <div class="text-slate-800 mt-1 truncate">${escapeHtml(h.clause)}</div>
+              <div class="text-[10px] text-slate-500 mt-1">${escapeHtml(h.docType)}</div>
+              <div class="flex gap-2 mt-1 text-[10px]">
+                <span class="text-blue-600">C:${Math.round(h.clarity * 100)}</span>
+                <span class="text-emerald-600">E:${Math.round(h.enforceability * 100)}</span>
+                <span class="text-rose-600">R:${Math.round(h.risk * 100)}</span>
+                <span class="text-amber-600">P:${Math.round(h.completeness * 100)}</span>
+              </div>
             </div>
           `;
         });
@@ -890,14 +969,18 @@ $state_pill = ['text' => 'Idle', 'tone' => null];
       }
 
       function clearAnalysis() {
-        qsgScoreEl.textContent = '—';
-        qsgNotesEl.textContent = '—';
-        logicScoreEl.textContent = '—';
-        logicNotesEl.textContent = '—';
-        kantScoreEl.textContent = '—';
-        kantNotesEl.textContent = '—';
-        formulaBox.textContent = '—';
-        stateExplanationEl.textContent = 'Run a scan to project the clause into the 2³ ruliad state space.';
+        clarityScoreEl.textContent = '—';
+        clarityNotesEl.textContent = '—';
+        enforceabilityScoreEl.textContent = '—';
+        enforceabilityNotesEl.textContent = '—';
+        riskScoreEl.textContent = '—';
+        riskNotesEl.textContent = '—';
+        completenessScoreEl.textContent = '—';
+        completenessNotesEl.textContent = '—';
+        overallQualityEl.textContent = '—';
+        stateExplanationEl.textContent = 'Analyze a clause to see quality assessment and document type classification.';
+        entitiesDisplayEl.innerHTML = '<p class="text-slate-500">Parties, dates, amounts, and obligations will appear here after analysis.</p>';
+        docTypeEl.textContent = 'Document type will appear here';
         statePill.textContent = 'Cleared';
         statePill.className = 'inline-flex items-center rounded-full border border-slate-300 bg-slate-50 text-slate-700 px-2 py-0.5 text-[11px] font-medium';
       }
