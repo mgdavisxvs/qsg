@@ -15,6 +15,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/analysis_core.php';
+require_once __DIR__ . '/cache.php';
+require_once __DIR__ . '/logger.php';
 
 // Enable assertions
 assert_options(ASSERT_ACTIVE, 1);
@@ -527,6 +529,195 @@ test("Analysis handles complex QSG clause", function() {
 
     assert($qsg['score'] > 0.5); // Should score reasonably
     assert(str_contains($fol['formula'], '∃')); // Should have FOL
+});
+
+echo "\n";
+
+// ============================================================================
+// CACHE TESTS
+// ============================================================================
+
+echo "Cache Tests:\n";
+echo "------------\n";
+
+test("AnalysisCache get returns null for missing key", function() {
+    $cache = new AnalysisCache();
+    $result = $cache->get('nonexistent');
+    assert($result === null);
+});
+
+test("AnalysisCache set and get work correctly", function() {
+    $cache = new AnalysisCache();
+    $data = ['score' => 0.85, 'result' => 'test'];
+
+    $cache->set('test_key', $data);
+    $result = $cache->get('test_key');
+
+    assert($result !== null);
+    assert($result['score'] === 0.85);
+    assert($result['result'] === 'test');
+});
+
+test("AnalysisCache tracks hits and misses", function() {
+    $cache = new AnalysisCache();
+
+    // Miss
+    $cache->get('missing');
+    $stats = $cache->get_stats();
+    assert($stats['misses'] === 1);
+    assert($stats['hits'] === 0);
+
+    // Hit
+    $cache->set('present', ['data' => 'value']);
+    $cache->get('present');
+    $stats = $cache->get_stats();
+    assert($stats['hits'] === 1);
+    assert($stats['misses'] === 1);
+});
+
+test("AnalysisCache respects max size with LRU eviction", function() {
+    $cache = new AnalysisCache(3); // Small cache for testing
+
+    $cache->set('key1', ['value' => 1]);
+    $cache->set('key2', ['value' => 2]);
+    $cache->set('key3', ['value' => 3]);
+
+    assert($cache->size() === 3);
+
+    // Adding 4th item should evict least recently used (key1)
+    $cache->set('key4', ['value' => 4]);
+
+    assert($cache->size() === 3);
+    assert($cache->get('key1') === null); // Evicted
+    assert($cache->get('key2')['value'] === 2); // Still present
+});
+
+test("AnalysisCache updates access time on get", function() {
+    $cache = new AnalysisCache(2); // Small cache
+
+    $cache->set('key1', ['value' => 1]);
+    $cache->set('key2', ['value' => 2]);
+
+    // Access key1 to make it recently used
+    $cache->get('key1');
+
+    // Add key3 - should evict key2 (least recently used)
+    $cache->set('key3', ['value' => 3]);
+
+    assert($cache->get('key1')['value'] === 1); // Still present
+    assert($cache->get('key2') === null); // Evicted
+    assert($cache->get('key3')['value'] === 3); // Present
+});
+
+test("AnalysisCache clear removes all entries", function() {
+    $cache = new AnalysisCache();
+
+    $cache->set('key1', ['value' => 1]);
+    $cache->set('key2', ['value' => 2]);
+    assert($cache->size() === 2);
+
+    $cache->clear();
+    assert($cache->size() === 0);
+    assert($cache->get('key1') === null);
+});
+
+echo "\n";
+
+// ============================================================================
+// LOGGER TESTS
+// ============================================================================
+
+echo "Logger Tests:\n";
+echo "-------------\n";
+
+test("Logger creates log file and writes entries", function() {
+    $log_file = '/tmp/qsg_test_' . uniqid() . '.log';
+    $logger = new Logger($log_file, Logger::DEBUG);
+
+    $logger->info('Test message', ['key' => 'value']);
+
+    assert(file_exists($log_file));
+    $contents = file_get_contents($log_file);
+    assert(str_contains($contents, 'INFO'));
+    assert(str_contains($contents, 'Test message'));
+
+    // Cleanup
+    unlink($log_file);
+});
+
+test("Logger respects minimum log level", function() {
+    $log_file = '/tmp/qsg_test_' . uniqid() . '.log';
+    $logger = new Logger($log_file, Logger::WARN); // Only WARN and ERROR
+
+    $logger->debug('Debug message');
+    $logger->info('Info message');
+    $logger->warn('Warning message');
+
+    $contents = file_get_contents($log_file);
+    assert(!str_contains($contents, 'Debug message'));
+    assert(!str_contains($contents, 'Info message'));
+    assert(str_contains($contents, 'Warning message'));
+
+    // Cleanup
+    unlink($log_file);
+});
+
+test("Logger writes structured context as JSON", function() {
+    $log_file = '/tmp/qsg_test_' . uniqid() . '.log';
+    $logger = new Logger($log_file, Logger::DEBUG);
+
+    $logger->info('Test', ['user_id' => 123, 'action' => 'scan']);
+
+    $contents = file_get_contents($log_file);
+    assert(str_contains($contents, '"user_id":123'));
+    assert(str_contains($contents, '"action":"scan"'));
+
+    // Cleanup
+    unlink($log_file);
+});
+
+test("Logger tail returns recent entries", function() {
+    $log_file = '/tmp/qsg_test_' . uniqid() . '.log';
+    $logger = new Logger($log_file, Logger::DEBUG);
+
+    $logger->info('Line 1');
+    $logger->info('Line 2');
+    $logger->info('Line 3');
+
+    $tail = $logger->tail(2);
+
+    assert(count($tail) === 2);
+    assert(str_contains($tail[0], 'Line 2'));
+    assert(str_contains($tail[1], 'Line 3'));
+
+    // Cleanup
+    unlink($log_file);
+});
+
+test("Logger handles all log levels", function() {
+    $log_file = '/tmp/qsg_test_' . uniqid() . '.log';
+    $logger = new Logger($log_file, Logger::DEBUG);
+
+    $logger->debug('Debug message');
+    $logger->info('Info message');
+    $logger->warn('Warning message');
+    $logger->error('Error message');
+
+    $contents = file_get_contents($log_file);
+    assert(str_contains($contents, 'DEBUG'));
+    assert(str_contains($contents, 'INFO'));
+    assert(str_contains($contents, 'WARN'));
+    assert(str_contains($contents, 'ERROR'));
+
+    // Cleanup
+    unlink($log_file);
+});
+
+test("get_logger returns singleton instance", function() {
+    $logger1 = get_logger();
+    $logger2 = get_logger();
+
+    assert($logger1 === $logger2); // Same instance
 });
 
 echo "\n";

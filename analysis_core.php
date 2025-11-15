@@ -632,16 +632,52 @@ function format_score(?float $score): string {
 // ============================================================================
 
 /**
+ * Convert phrase tokens to entity variable name.
+ *
+ * KNUTH: "Extract closures to testable top-level functions."
+ * COMPLEXITY: O(n) where n = number of tokens in phrase
+ *
+ * Algorithm:
+ * 1. Filter out determiners and conjunctions (grammatical words)
+ * 2. Take last remaining word as head noun (English head-final in NPs)
+ * 3. Sanitize to valid identifier (alphanumeric only)
+ *
+ * @param array $phrase_tokens Tokens in phrase
+ * @param int $index Fallback index for anonymous entities (e.g., "x0")
+ * @return string Entity variable name (e.g., "council", "land", "x0")
+ */
+function phrase_to_entity_name(array $phrase_tokens, int $index): string {
+    $core = [];
+    foreach ($phrase_tokens as $t) {
+        // Skip grammatical words (not semantic heads)
+        if (preg_match('/^(the|a|an|and|or|but)$/u', $t['lower'])) {
+            continue;
+        }
+        $core[] = mb_strtolower($t['clean'], 'UTF-8');
+    }
+
+    if (empty($core)) {
+        return 'x' . $index; // Anonymous entity
+    }
+
+    // KNUTH: "Take the head noun (last content word in English NPs)"
+    $head = end($core);
+    $name = preg_replace('/[^a-z0-9]/u', '', $head);
+
+    return $name !== '' ? $name : ('x' . $index);
+}
+
+/**
  * Build First-Order Logic skeleton from tokens.
  *
+ * KNUTH: "Make control flow explicit and provable."
  * COMPLEXITY: O(n) where n = token count
+ * INVARIANT: Each segment processed exactly once
  *
  * Constructs a rough FOL-like formula by:
  * 1. Splitting clause at prepositions
  * 2. Converting phrases to entity variables
  * 3. Creating relations from prepositions
- *
- * KNUTH: Uses centralized PREPOSITIONS constant to avoid duplication.
  *
  * @param array $tokens Classified tokens
  * @return array ['formula' => string, 'notes' => string]
@@ -713,46 +749,41 @@ function build_fol(array $tokens): array {
     $entity_idx = 0;
     $last_ent   = null;
 
-    $phrase_to_entity = function (array $phrase_tokens, int $index): string {
-        $core = [];
-        foreach ($phrase_tokens as $t) {
-            // Skip determiners and conjunctions
-            if (preg_match('/^(the|a|an|and|or|but)$/u', $t['lower'])) {
-                continue;
-            }
-            $core[] = mb_strtolower($t['clean'], 'UTF-8');
-        }
-        if (empty($core)) {
-            return 'x' . $index;
-        }
-        $head = end($core);
-        $name = preg_replace('/[^a-z0-9]/u', '', $head);
-        return $name !== '' ? $name : ('x' . $index);
-    };
-
+    // KNUTH: "Use explicit state machine instead of loop variable manipulation"
+    $idx = 0;
     $count_segments = count($segments);
-    for ($i = 0; $i < $count_segments; $i++) {
-        $seg = $segments[$i];
+
+    while ($idx < $count_segments) {
+        $seg = $segments[$idx];
 
         if ($seg['type'] === 'phrase') {
-            $ent = $phrase_to_entity($seg['tokens'], $entity_idx++);
+            $ent = phrase_to_entity_name($seg['tokens'], $entity_idx++);
             $entities[] = $ent;
             if ($last_ent === null) {
                 $last_ent = $ent;
             }
+            $idx++; // Explicit increment
         } elseif ($seg['type'] === 'prep') {
             $prep_word = $seg['tokens'][0]['lower'];
-            $next     = $segments[$i + 1] ?? null;
+            $next = $segments[$idx + 1] ?? null;
+
             if ($next && $next['type'] === 'phrase') {
-                $ent = $phrase_to_entity($next['tokens'], $entity_idx++);
+                $ent = phrase_to_entity_name($next['tokens'], $entity_idx++);
                 $entities[] = $ent;
                 $relation_name = ucfirst($prep_word);
-                $relations[]  = $relation_name . '(' . $last_ent . ', ' . $ent . ')';
-                $last_ent      = $ent;
-                $i++; // Skip phrase we just used
+                $relations[] = $relation_name . '(' . $last_ent . ', ' . $ent . ')';
+                $last_ent = $ent;
+                $idx += 2; // Skip both prep and phrase - explicit
+            } else {
+                $idx++; // Skip prep without following phrase
             }
+        } else {
+            $idx++; // Unknown segment type
         }
     }
+
+    // KNUTH: "Assert loop postcondition"
+    assert($idx === $count_segments, "All segments must be processed");
 
     $unique_entities = array_values(array_unique($entities));
     $var_list        = implode(', ', $unique_entities);
