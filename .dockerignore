@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# Logs and cache (will be mounted as volumes)
+logs/*
+cache/*
+tmp/*
+backups/*
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Development files
+.env.example
+*.bak
+*.swp
+*~
+
+# Tests (optional - uncomment to exclude)
+# test*.php
+# tests.php
+
+# Deployment scripts (not needed in container)
+deploy.sh
+quickstart.sh
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDE and editor files
+.vscode
+.idea
+*.sublime-*

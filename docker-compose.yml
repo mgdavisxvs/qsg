@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  legal-analyzer:
+    build: .
+    container_name: legal-analyzer
+    image: legal-analyzer:4.1
+    ports:
+      - "8080:80"
+    volumes:
+      # Persist logs and cache
+      - ./logs:/var/www/html/logs
+      - ./cache:/var/www/html/cache
+      - ./backups:/var/www/html/backups
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - CACHE_ENABLED=true
+      - LOG_LEVEL=warning
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/qsgx_v2.php"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - legal-analyzer-network
+
+networks:
+  legal-analyzer-network:
+    driver: bridge
+
+# Usage:
+# Development:
+#   docker-compose up -d
+#   Access: http://localhost:8080/qsgx_v2.php
+#
+# Production:
+#   docker-compose up -d
+#   Add reverse proxy (Nginx/Traefik) with SSL
+#
+# Logs:
+#   docker-compose logs -f
+#
+# Stop:
+#   docker-compose down
+#
+# Rebuild:
+#   docker-compose up -d --build
